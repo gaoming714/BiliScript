@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "biliscript"
+version = "0.1.0"
+description = ""
+authors = ["gaoming714 <gaoming714@outlook.com>"]
+
+[tool.poetry.dependencies]
+python = "~3.10"
+watchfiles = "^0.15.0"
+pyinstaller = "^5.2"
+icecream = "^2.1.2"
+selenium = "^4.3.0"
+tqdm = "^4.64.0"
+hues = "^0.2.2"
+loguru = "^0.6.0"
+requests = "^2.28.1"
+requests-html = "^0.10.0"
+pendulum = "^2.1.2"
+alive-progress = "^2.4.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
