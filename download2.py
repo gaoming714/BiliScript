@@ -7,7 +7,7 @@ import time
 import json
 import os
 from tqdm import tqdm
-from alive_progress import alive_bar
+from alive_progress import alive_bar, alive_it
 
 driver = webdriver.Firefox()
 
@@ -145,7 +145,8 @@ def download_by_dlpanda(video_id):
     download_attr =  download_button.get_attribute("download")
     # real_href = "https://dlpanda" + href_attr
     target_name = download_attr.split(']',1)[1]   # remove [DLpanda]
-    cmd = "wget " + href_attr + " -q -O " + "\"downloads/" + target_name + "\"" 
+    # cmd = "wget " + href_attr + " -q -O " + "\"downloads/" + target_name + "\"" 
+    cmd = "curl -s -o " + "\"downloads/" + target_name + "\" " + href_attr
     lumos(cmd)
 
     # return download_button.get_attribute("href")
