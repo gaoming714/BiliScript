@@ -172,7 +172,7 @@ def get_data(bv_id):
     except:
         return "","","","",""
 
-    time.sleep(90)
+    time.sleep(60)
 
     return online_str, play_str, star_str, time_str, title_str
 
