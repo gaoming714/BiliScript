@@ -32,6 +32,9 @@ def fetch_videos(user_mixin):
         skip_flag = item["skip_flag"]
         skip_list = item["skip_list"]
 
+        if "]" in last_id:
+            last_id = last_id.rsplit("]",1)[1]
+
         if skip_flag == True:
             continue
 
