@@ -17,6 +17,7 @@ from loguru import logger
 # package : poetry run pyinstaller dashboard.py --onefile --collect-all grapheme
 # action : grapheme
 
+import pandas as pd
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -31,8 +32,9 @@ DIST = "output"
 
 FILE_list = None
 
-best_online = 0
-best_moment = None
+df = None
+
+
 
 #This example requires Selenium WebDriver 3.13 or newe
 options = Options()
@@ -68,66 +70,28 @@ def login():
 
 
 def launch():
-    global best_online
-    global best_moment
     ticktock = pendulum.now("Asia/Shanghai")
     # print(ticktock)
     print("=> ", ticktock.to_datetime_string())
     user_id = "30978137"
     video_list = fetch_user(user_id, limit = 20)
+    ext_videos(video_list)   # add some special BV _ id
+    # print(video_list)
     box = []
-    flag = " "
-    total_online = 0
 
-    pretty = "\n"
-    # with alive_bar(len(video_list)) as bar:
     for bv_id in alive_it(video_list):
-        online, play, like, star, release_time, title = get_data(bv_id)
-        box.append([bv_id, online, play, like, star, release_time, title])
-        # bar()
-    for item in box:
-        bv_id, online, play, like, star, release_time, title  = item
-        if online == "" or play == "" or like == "" or star == "":
-            print(bv_id, " => skip")
+        # online, play, like, coin, star, release_time, title = get_data(bv_id)
+        # box.append([bv_id, online, play, like, coin, star, release_time, title])
+        bv_dict = get_data(bv_id)
+        if bv_dict == {}:
+            print([bv_id," => skip"] )
             continue
-        if online.isdigit():
-            online_num = int(online) - 1
-            total_online += online_num
-            online  = str(online_num)
-            if online_num > 999:
-                online = "^"   + online
-            elif online_num > 99:
-                online = "$ "   + online
-            elif online_num > 50:
-                online = "@  "  + online
-            elif online_num > 24:
-                online = "&  "  + online
-            elif online_num > 9:
-                online = "+  "  + online
-            elif online_num > 0:
-                online = "    " + online
-            elif online_num == 0:
-                online = "     "
-            else:
-                online = "ERROR"
-        else:
-            online = " "
-        stay_num, rate_num = stay_rate(play, like, star)
-        stay = str(stay_num)
-        rate = "{:.2f} %".format(rate_num * 100)
-        # pretty = pretty + flag + online + "\t" + play + "\t" + stay + "\t" +  rate + "\t" + release_time + "  " + bv_id + " " + title + "\n" 
-        pretty = pretty + flag + online + "\t" + play + "\t" + stay + "\t" +  rate + "\t" + release_time + "  " + title + "\n" 
-        # if flag != " ":
-        #     pretty = pretty + "\t\t\t\t" + title + "\n"
-    pretty = pretty + "Total => " + str(total_online) + "\t"
-    if total_online > best_online:
-        best_online = total_online
-        best_moment = ticktock.to_datetime_string()
-    if best_moment != None:
-        pretty = pretty + "Best => " + str(best_online) + "\t" + best_moment + "\t"
-    pretty = pretty + "\n"
-    logger.debug(pretty)
-        # print(online, "\t",  play, "\t", star, "\t", release_time, "\t", title)
+        bv_dict["bv_id"] = bv_id
+        box.append(bv_dict)
+        # bar()
+    cmd_print(box)
+    # box is  [ { } , { } ]
+    monitor(box)
 
 
 def fetch_user(user_id, limit = None):
@@ -149,11 +113,17 @@ def fetch_user(user_id, limit = None):
         video_id_list = video_id_list[:limit]
     return video_id_list
 
+def ext_videos(video_list):
+    ext_list = ["BV1WT411K7Ti"]
+    for id_item in ext_list:
+        if id_item not in video_list:
+            video_list.append(id_item)
+
 def get_data(bv_id):
     video_url = "https://www.bilibili.com/video/" + bv_id
     driver.get(video_url)
+    ticktock = pendulum.now("Asia/Shanghai")
     time.sleep(1)
-
     first_result = wait.until(ExpC.presence_of_element_located((By.CLASS_NAME, "bpx-player-sending-bar")))
     time.sleep(2)
     try:
@@ -163,40 +133,153 @@ def get_data(bv_id):
         play_str = play_el.text
         like_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[1]/span")
         like_str = like_el.text
+        coin_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[2]/span")
+        coin_str = coin_el.text
         star_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[3]/span")
         star_str = star_el.text
-        time_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[3]/span/span")
-        time_str = time_el.text
+        rtime_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[3]/span/span")
+        rtime_str = rtime_el.text
         title_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/h1")
         title_str = title_el.text
         title_str = title_str[:30]
     except:
-        return "","","","","",""
-
+        return {}
+    if "-" == online_str:
+        print("selenium warning 1")
+        return {}
+    if "" in [online_str, play_str, like_str, coin_str, star_str]:
+        print("selenium warning 2")
+        return {}
     # time.sleep(1)
-    if like_str == "点赞":
-        like_str = "0"
-    if star_str == "收藏":
-        star_str = "0"
+    online =  pretty_num(online_str)
+    play = pretty_num(play_str)
+    like = pretty_num(like_str)
+    coin = pretty_num(coin_str) 
+    star = pretty_num(star_str)
 
-    return online_str, play_str, like_str, star_str, time_str, title_str
+    stay, rate = stay_rate(play, like, coin, star)
+    rtime = pendulum.parse(rtime_str, tz="Asia/Shanghai")
 
-def stay_rate(play_str, like_str, star_str):
-    play_num = pretty_num(play_str)
-    like_num = pretty_num(like_str)
-    star_num = pretty_num(star_str)
-    stay_num = like_num + star_num
-    rate_num = stay_num / play_num
+    output_dict = { "online": online - 1,
+                    "play": play,
+                    "like": like,
+                    "coin": coin, 
+                    "star": star, 
+                    "stay": stay,
+                    "rate": rate,
+                    "rtime": rtime.to_datetime_string(),     # to datetime str
+                    "mtime": ticktock.to_datetime_string(),  # to datetime str
+                    "title": title_str}
+    return output_dict
+
+def stay_rate(play_num, like_num, coin_num, star_num):
+    if play_num == 0:
+        return 0, 0
+
+    if play_num < 200:
+        stay_num = 0
+        rate_num = 0
+    else:
+        stay_num = like_num + star_num + coin_num * 5
+        rate_num = stay_num / play_num
 
     return stay_num , rate_num
 
 def pretty_num(origin_str):
-    if not origin_str.isdigit():
+    if origin_str in [" ","  ","-","点赞","投币","收藏"]:
+        output_num = 0  
+    elif not origin_str.isdigit():
         tmp_str = origin_str[:-1]
         output_num = int(float(tmp_str) * 10000)
     else:
         output_num = int(origin_str)
     return output_num
+
+def cmd_print(box_list):
+    pretty = "\n"
+    offline = []
+    for item in box_list:
+        # bv_id, online, play, like, coin, star, release_time, title  = item
+        bv_id = item["bv_id"]
+        online = item["online"]
+        play = item["play"]
+        like = item["like"]
+        coin = item["coin"]
+        star = item["star"]
+        stay = item["stay"]
+        rate = item["rate"]
+        rtime = item["rtime"]
+        mtime = item["mtime"]
+        title = item["title"]
+
+        if online > 999:
+            online_str = "^"+ str(online)
+        elif online > 99:
+            online_str = "$ "   + str(online)
+        elif online > 50:
+            online_str = "@  "  + str(online)
+        elif online > 24:
+            online_str = "&  "  + str(online)
+        elif online > 9:
+            online_str = "+  "  + str(online)
+        elif online > 0:
+            online_str = "    " + str(online)
+        elif online == 0:
+        # total_online += online_num
+            offline.append([bv_id, play])
+            continue
+        else:
+            print("warning => " , online_str)
+            online_str = "ERROR"
+
+
+        # rate = "{:.2f} %".format(rate_num * 100)
+        # pretty = pretty + flag + online + "\t" + play + "\t" + stay + "\t" +  rate + "\t" + release_time + "  " + bv_id + " " + title + "\n" 
+        pretty = pretty + " " + online_str + "\t" + str(play) + "\t" + str(stay) + "\t"  + \
+                 str(rtime) + "  " + bv_id + "  " +  title + "\n" 
+    # print offline
+    logger.debug(offline)
+    #print online
+    logger.debug(pretty)
+
+def monitor(box_list):
+    global df
+    if box_list == []:
+        return
+    if type(df) == type(None):
+        df = pd.DataFrame(box_list)
+        df = df[["bv_id","title","rtime","mtime","online","play","like","stay"]]
+        df["rtime"] = pd.to_datetime(df["rtime"])
+        df["mtime"] = pd.to_datetime(df["mtime"])
+
+    else:
+        box_df = pd.DataFrame(box_list)
+        box_df = box_df[["bv_id","title","rtime","mtime","online","play","like","stay"]]
+        box_df["rtime"] = pd.to_datetime(box_df["rtime"])
+        box_df["mtime"] = pd.to_datetime(box_df["mtime"])
+        df = pd.concat([df,box_df], ignore_index = True)
+
+    # print(df.set_index("bv_id")["title"].to_dict())
+
+    # title_dict = df.set_index("bv_id")["title"].to_dict()
+    # print(title_dict)
+
+    # df = pd.concat([df, box_df],ignore_index = True)
+    # print(df)
+    # tmp = df[df["bv_id"] == "BV1WT411K7Ti"]
+    # print(df.groupby(['bv_id']).resample("H")["online"].mean())
+
+    a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["online"].mean().round(2)
+    b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["play"].last()
+    c_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["stay"].last()
+    l_df = pd.concat([a_se,b_se,c_se], axis=1)
+    m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
+    n_df = m_df.sort_values(by='rtime', ascending=False)
+    print(n_df)
+
+
+
+
 
 
 def lumos(cmd):

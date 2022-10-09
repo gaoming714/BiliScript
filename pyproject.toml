@@ -17,6 +17,7 @@ requests = "^2.28.1"
 requests-html = "^0.10.0"
 pendulum = "^2.1.2"
 alive-progress = "^2.4.1"
+pandas = "^1.5.0"
 
 [tool.poetry.dev-dependencies]
 
