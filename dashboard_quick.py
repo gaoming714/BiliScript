@@ -102,7 +102,7 @@ def fetch_user(user_id, limit = None):
     # print("fetch_user")
     # print(driver.title)
 
-    time.sleep(2)
+    time.sleep(5)
 
     video_els = driver.find_elements(By.CLASS_NAME, "small-item")
     video_id_list = []
@@ -123,9 +123,9 @@ def get_data(bv_id):
     video_url = "https://www.bilibili.com/video/" + bv_id
     driver.get(video_url)
     ticktock = pendulum.now("Asia/Shanghai")
-    time.sleep(1)
+    time.sleep(5)
     first_result = wait.until(ExpC.presence_of_element_located((By.CLASS_NAME, "bpx-player-sending-bar")))
-    time.sleep(2)
+    time.sleep(1)
     try:
         online_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[2]/div[2]/div/div/div[1]/div[2]/div/div[1]/div[1]/b")
         online_str = online_el.text
@@ -272,12 +272,20 @@ def monitor(box_list):
     a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["online"].mean().round(2)
     b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["play"].last()
     c_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["stay"].last()
-    l_df = pd.concat([a_se,b_se,c_se], axis=1)
-    m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
-    n_df = m_df.sort_values(by='rtime', ascending=False)
+    m_df = pd.concat([a_se,b_se,c_se], axis=1)
+    # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
+    m_df = m_df[(m_df["online"] >= 5)]
+    n_df = m_df.sort_values(by=['rtime','mtime'], ascending=False)
     print(n_df)
 
-
+    a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["online"].last().round(2)
+    b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["play"].last()
+    c_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["stay"].last()
+    m_df = pd.concat([a_se,b_se,c_se], axis=1)
+    # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
+    m_df = m_df[(m_df["play"] >= 10000)]
+    n_df = m_df.sort_values(by=['rtime'], ascending=False)
+    print(n_df)
 
 
 
@@ -299,7 +307,7 @@ if __name__ == '__main__':
     # login()
     while True:
         launch()
-        time.sleep(10)
+        time.sleep(60)
     # for item in range(1000):
     #     print("=====================================")
     #     launch()
