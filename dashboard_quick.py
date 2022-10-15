@@ -76,7 +76,7 @@ def launch():
     # print(ticktock)
     print("=> ", ticktock.to_datetime_string())
     user_id = "30978137"
-    video_list = fetch_user(user_id, limit = 20)
+    video_list = fetch_user(user_id, limit = 30)
     ext_videos(video_list)   # add some special BV _ id
     # print(video_list)
     box = []
@@ -235,7 +235,7 @@ def stay_rate(play_num, like_num, coin_num, star_num):
     if play_num == 0:
         return 0, 0
 
-    if play_num < 200:
+    if play_num < 50:
         stay_num = 0
         rate_num = 0
     else:
@@ -255,7 +255,7 @@ def pretty_num(origin_str):
     return output_num
 
 def cmd_print(box_list):
-    pretty = "\n"
+    pretty = "Current Dashboard Data \n"
     offline = []
     for item in box_list:
         # bv_id, online, play, like, coin, star, release_time, title  = item
@@ -271,6 +271,8 @@ def cmd_print(box_list):
         mtime = item["mtime"]
         title = item["title"]
 
+        time_diff = (pendulum.parse(mtime) - pendulum.parse(rtime)).in_hours()
+
         if online > 999:
             online_str = "^"+ str(online)
         elif online > 99:
@@ -284,11 +286,11 @@ def cmd_print(box_list):
         elif online > 0:
             online_str = "    " + str(online)
         elif online == 0:
-        # total_online += online_num
-            offline.append([bv_id, play])
-            continue
-            # online_str = "    "
-
+            online_str = "    "
+            # total_online += online_num
+            if time_diff > 24:
+                offline.append([bv_id, play])
+                continue
         else:
             print("warning => " , online_str)
             online_str = "ERROR"
@@ -339,14 +341,14 @@ def monitor(box_list):
     n_df = m_df.sort_values(by=['rtime','mtime'], ascending=False)
     print(n_df)
 
-    a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["online"].last().round(2)
-    b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["play"].last()
-    c_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["stay"].last()
-    m_df = pd.concat([a_se,b_se,c_se], axis=1)
-    # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
-    m_df = m_df[(m_df["play"] >= 10000)]
-    n_df = m_df.sort_values(by=['rtime'], ascending=False)
-    print(n_df)
+    # a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["online"].last().round(2)
+    # b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["play"].last()
+    # c_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["stay"].last()
+    # m_df = pd.concat([a_se,b_se,c_se], axis=1)
+    # # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
+    # m_df = m_df[(m_df["play"] >= 10000)]
+    # n_df = m_df.sort_values(by=['rtime'], ascending=False)
+    # print(n_df)
 
 
 
