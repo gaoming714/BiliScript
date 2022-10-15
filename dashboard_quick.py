@@ -26,6 +26,8 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ExpC
 
+import requests
+
 SRC_audio = "inputAudio"
 SRC_video = "inputVideo"
 DIST = "output"
@@ -82,7 +84,8 @@ def launch():
     for bv_id in alive_it(video_list):
         # online, play, like, coin, star, release_time, title = get_data(bv_id)
         # box.append([bv_id, online, play, like, coin, star, release_time, title])
-        bv_dict = get_data(bv_id)
+        # bv_dict = get_data(bv_id)
+        bv_dict = get_api(bv_id)
         if bv_dict == {}:
             print([bv_id," => skip"] )
             continue
@@ -114,7 +117,7 @@ def fetch_user(user_id, limit = None):
     return video_id_list
 
 def ext_videos(video_list):
-    ext_list = ["BV1WT411K7Ti"]
+    ext_list = ["BV1WT411K7Ti","BV1uT411P7Nq"]
     for id_item in ext_list:
         if id_item not in video_list:
             video_list.append(id_item)
@@ -172,6 +175,62 @@ def get_data(bv_id):
                     "title": title_str}
     return output_dict
 
+def get_api(bv_id):
+    ticktock = pendulum.now("Asia/Shanghai")
+
+    cid_url = "https://api.bilibili.com/x/player/pagelist"
+    payload = {"bvid": bv_id}
+    r = requests.get(cid_url,params=payload)
+    if r.status_code != 200:
+        return
+    res = r.json()
+    c_id = res["data"][0]["cid"]
+
+    online_url = "http://api.bilibili.com/x/player/online/total"
+    payload = {"bvid": bv_id, "cid": c_id}
+    r = requests.get(online_url,params=payload)
+    if r.status_code != 200:
+        return
+    res = r.json()
+    online_str = res["data"]["total"]
+    online =  pretty_num(online_str)
+
+    view_url = "http://api.bilibili.com/x/web-interface/view"
+    payload = {"bvid": bv_id}
+    r = requests.get(view_url,params=payload)
+    if r.status_code != 200:
+        return
+    res = r.json()
+    title_str = res["data"]["title"][:30]
+    rtime_num = res["data"]["pubdate"]
+    rtime = pendulum.from_timestamp(rtime_num, tz="Asia/Shanghai")
+    duration_num = res["data"]["duration"]
+    play = res["data"]["stat"]["view"]
+    like = res["data"]["stat"]["like"]
+    coin = res["data"]["stat"]["coin"]
+    star = res["data"]["stat"]["favorite"]
+    his_rank = res["data"]["stat"]["his_rank"]
+    now_rank = res["data"]["stat"]["now_rank"]
+    evaluation_str  = res["data"]["stat"]["evaluation"]
+    # print(online)
+    # print(his_rank)
+    # print(now_rank)
+    # print(evaluation_str)
+    stay, rate = stay_rate(play, like, coin, star)
+
+    output_dict = { "online": online - 1,
+                    "play": play,
+                    "like": like,
+                    "coin": coin, 
+                    "star": star, 
+                    "stay": stay,
+                    "rate": rate,
+                    "rtime": rtime.to_datetime_string(),     # to datetime str
+                    "mtime": ticktock.to_datetime_string(),  # to datetime str
+                    "title": title_str}
+    return output_dict
+
+
 def stay_rate(play_num, like_num, coin_num, star_num):
     if play_num == 0:
         return 0, 0
@@ -228,6 +287,8 @@ def cmd_print(box_list):
         # total_online += online_num
             offline.append([bv_id, play])
             continue
+            # online_str = "    "
+
         else:
             print("warning => " , online_str)
             online_str = "ERROR"
