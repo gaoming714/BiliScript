@@ -37,11 +37,10 @@ FILE_list = None
 df = None
 
 
-
-#This example requires Selenium WebDriver 3.13 or newe
+# This example requires Selenium WebDriver 3.13 or newe
 options = Options()
-options.add_argument('-headless') # headless
-driver = webdriver.Firefox(executable_path='geckodriver', options=options)
+options.add_argument("-headless")  # headless
+driver = webdriver.Firefox(executable_path="geckodriver", options=options)
 wait = WebDriverWait(driver, 10)
 
 
@@ -59,6 +58,7 @@ def load():
     #     CURL_cmd = data["curlCmd"]
     #     FILE_list = data["infoArr"]
 
+
 def login():
     driver.get("https://passport.bilibili.com/login")
 
@@ -66,7 +66,9 @@ def login():
     print("Please login \n")
 
     wait = WebDriverWait(driver, 120)
-    first_result = wait.until(ExpC.presence_of_element_located((By.CLASS_NAME, "header-entry-mini")))
+    first_result = wait.until(
+        ExpC.presence_of_element_located((By.CLASS_NAME, "header-entry-mini"))
+    )
 
     print("done")
 
@@ -76,8 +78,9 @@ def launch():
     # print(ticktock)
     print("=> ", ticktock.to_datetime_string())
     user_id = "30978137"
-    video_list = fetch_user(user_id, limit = 30)
-    ext_videos(video_list)   # add some special BV _ id
+    # video_list = fetch_user(user_id, limit = 30)
+    video_list = fetch_user_api(user_id)
+    ext_videos(video_list)  # add some special BV _ id
     # print(video_list)
     box = []
 
@@ -87,18 +90,18 @@ def launch():
         # bv_dict = get_data(bv_id)
         bv_dict = get_api(bv_id)
         if bv_dict == {} or bv_dict == None:
-            print([bv_id," => skip"] )
+            print([bv_id, " => skip"])
             continue
         bv_dict["bv_id"] = bv_id
         box.append(bv_dict)
-        # time.sleep(1)  # for cid api should not be too fast
+        time.sleep(1)  # for cid api should not be too fast
         # bar()
     cmd_print(box)
     # box is  [ { } , { } ]
     monitor(box)
 
 
-def fetch_user(user_id, limit = None):
+def fetch_user(user_id, limit=None):
     # return all videos(bv_id) in this user
     user_url = "https://space.bilibili.com/" + user_id + "/video"
     driver.get(user_url)
@@ -111,39 +114,79 @@ def fetch_user(user_id, limit = None):
     video_els = driver.find_elements(By.CLASS_NAME, "small-item")
     video_id_list = []
     for video_el in video_els:
-        video_id = video_el.get_attribute('data-aid')
+        video_id = video_el.get_attribute("data-aid")
         video_id_list.append(video_id)
     if limit != None:
         video_id_list = video_id_list[:limit]
     return video_id_list
 
+
+def fetch_user_api(user_id, limit=30):
+    user_url = "https://api.bilibili.com/x/space/arc/search"
+    payload = {"mid": user_id, "pn": 1, "ps": 30}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0"
+    }
+    r = requests.get(user_url, params=payload, headers=headers)
+    if r.status_code != 200:
+        print("user skip")
+        return
+    res = r.json()
+    if not check_res(res):
+        print("user skip")
+        return
+    vlist = res["data"]["list"]["vlist"]
+    video_id_list = []
+    for video_item in vlist:
+        video_id_list.append(video_item["bvid"])
+    return video_id_list
+
+
 def ext_videos(video_list):
-    ext_list = ["BV1WT411K7Ti","BV1uT411P7Nq"]
+    ext_list = ["BV1WT411K7Ti", "BV1uT411P7Nq"]
     for id_item in ext_list:
         if id_item not in video_list:
             video_list.append(id_item)
+
 
 def get_data(bv_id):
     video_url = "https://www.bilibili.com/video/" + bv_id
     driver.get(video_url)
     ticktock = pendulum.now("Asia/Shanghai")
     time.sleep(5)
-    first_result = wait.until(ExpC.presence_of_element_located((By.CLASS_NAME, "bpx-player-sending-bar")))
+    first_result = wait.until(
+        ExpC.presence_of_element_located((By.CLASS_NAME, "bpx-player-sending-bar"))
+    )
     time.sleep(1)
     try:
-        online_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[2]/div[2]/div/div/div[1]/div[2]/div/div[1]/div[1]/b")
+        online_el = driver.find_element(
+            By.XPATH,
+            "/html/body/div[2]/div[4]/div[1]/div[2]/div[2]/div/div/div[1]/div[2]/div/div[1]/div[1]/b",
+        )
         online_str = online_el.text
-        play_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[1]")
+        play_el = driver.find_element(
+            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[1]"
+        )
         play_str = play_el.text
-        like_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[1]/span")
+        like_el = driver.find_element(
+            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[1]/span"
+        )
         like_str = like_el.text
-        coin_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[2]/span")
+        coin_el = driver.find_element(
+            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[2]/span"
+        )
         coin_str = coin_el.text
-        star_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[3]/span")
+        star_el = driver.find_element(
+            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[3]/span"
+        )
         star_str = star_el.text
-        rtime_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[3]/span/span")
+        rtime_el = driver.find_element(
+            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[3]/span/span"
+        )
         rtime_str = rtime_el.text
-        title_el = driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/h1")
+        title_el = driver.find_element(
+            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/h1"
+        )
         title_str = title_el.text
         title_str = title_str[:30]
     except:
@@ -155,26 +198,29 @@ def get_data(bv_id):
         print("selenium warning 2")
         return {}
     # time.sleep(1)
-    online =  pretty_num(online_str)
+    online = pretty_num(online_str)
     play = pretty_num(play_str)
     like = pretty_num(like_str)
-    coin = pretty_num(coin_str) 
+    coin = pretty_num(coin_str)
     star = pretty_num(star_str)
 
     stay, rate = stay_rate(play, like, coin, star)
     rtime = pendulum.parse(rtime_str, tz="Asia/Shanghai")
 
-    output_dict = { "online": online - 1,
-                    "play": play,
-                    "like": like,
-                    "coin": coin, 
-                    "star": star, 
-                    "stay": stay,
-                    "rate": rate,
-                    "rtime": rtime.to_datetime_string(),     # to datetime str
-                    "mtime": ticktock.to_datetime_string(),  # to datetime str
-                    "title": title_str}
+    output_dict = {
+        "online": online - 1,
+        "play": play,
+        "like": like,
+        "coin": coin,
+        "star": star,
+        "stay": stay,
+        "rate": rate,
+        "rtime": rtime.to_datetime_string(),  # to datetime str
+        "mtime": ticktock.to_datetime_string(),  # to datetime str
+        "title": title_str,
+    }
     return output_dict
+
 
 def get_api(bv_id):
     ticktock = pendulum.now("Asia/Shanghai")
@@ -192,10 +238,12 @@ def get_api(bv_id):
     #     return
     # cid = res["data"][0]["cid"]
 
-
     view_url = "http://api.bilibili.com/x/web-interface/view"
     payload = {"bvid": bv_id}
-    r = requests.get(view_url,params=payload)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0"
+    }
+    r = requests.get(view_url, params=payload, headers=headers)
     if r.status_code != 200:
         print("view skip")
         return
@@ -203,7 +251,7 @@ def get_api(bv_id):
     if not check_res(res):
         print("view skip")
         return
-    cid = res["data"]["cid"] # maybe not stable
+    cid = res["data"]["cid"]  # maybe not stable
     title_str = res["data"]["title"][:30]
     rtime_num = res["data"]["pubdate"]
     rtime = pendulum.from_timestamp(rtime_num, tz="Asia/Shanghai")
@@ -214,7 +262,7 @@ def get_api(bv_id):
     star = res["data"]["stat"]["favorite"]
     his_rank = res["data"]["stat"]["his_rank"]
     now_rank = res["data"]["stat"]["now_rank"]
-    evaluation_str  = res["data"]["stat"]["evaluation"]
+    evaluation_str = res["data"]["stat"]["evaluation"]
     # print(online)
     # print(his_rank)
     # print(now_rank)
@@ -224,7 +272,10 @@ def get_api(bv_id):
     # online data
     online_url = "http://api.bilibili.com/x/player/online/total"
     payload = {"bvid": bv_id, "cid": cid}
-    r = requests.get(online_url,params=payload)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0"
+    }
+    r = requests.get(online_url, params=payload, headers=headers)
     if r.status_code != 200:
         print("online skip")
         return
@@ -233,18 +284,20 @@ def get_api(bv_id):
         print("online skip")
         return
     online_str = res["data"]["total"]
-    online =  pretty_num(online_str)
+    online = pretty_num(online_str)
 
-    output_dict = { "online": online - 1,
-                    "play": play,
-                    "like": like,
-                    "coin": coin, 
-                    "star": star, 
-                    "stay": stay,
-                    "rate": rate,
-                    "rtime": rtime.to_datetime_string(),     # to datetime str
-                    "mtime": ticktock.to_datetime_string(),  # to datetime str
-                    "title": title_str}
+    output_dict = {
+        "online": online - 1,
+        "play": play,
+        "like": like,
+        "coin": coin,
+        "star": star,
+        "stay": stay,
+        "rate": rate,
+        "rtime": rtime.to_datetime_string(),  # to datetime str
+        "mtime": ticktock.to_datetime_string(),  # to datetime str
+        "title": title_str,
+    }
     return output_dict
 
 
@@ -255,10 +308,11 @@ def stay_rate(play_num, like_num, coin_num, star_num):
     stay_num = like_num + star_num + coin_num * 5
     rate_num = stay_num / play_num
 
-    return stay_num , rate_num
+    return stay_num, rate_num
+
 
 def pretty_num(origin_str):
-    if origin_str in [" ","  ","-","点赞","投币","收藏"]:
+    if origin_str in [" ", "  ", "-", "点赞", "投币", "收藏"]:
         output_num = 0
     elif not origin_str.isdigit():
         tmp_str = origin_str[:-1]
@@ -266,6 +320,7 @@ def pretty_num(origin_str):
     else:
         output_num = int(origin_str)
     return output_num
+
 
 def check_res(json_dict):
     if type(json_dict) != type({}):
@@ -281,6 +336,7 @@ def check_res(json_dict):
         # raise
         return
     return True
+
 
 def cmd_print(box_list):
     pretty = "Current Dashboard Data \n"
@@ -303,15 +359,15 @@ def cmd_print(box_list):
         time_diff = (pendulum.parse(mtime) - pendulum.parse(rtime)).in_hours()
 
         if online > 999:
-            online_str = "^"+ str(online)
+            online_str = "^" + str(online)
         elif online > 99:
-            online_str = "$ "   + str(online)
+            online_str = "$ " + str(online)
         elif online > 50:
-            online_str = "@  "  + str(online)
+            online_str = "@  " + str(online)
         elif online > 24:
-            online_str = "&  "  + str(online)
+            online_str = "&  " + str(online)
         elif online > 9:
-            online_str = "+  "  + str(online)
+            online_str = "+  " + str(online)
         elif online > 0:
             online_str = "    " + str(online)
         elif online == 0:
@@ -321,18 +377,33 @@ def cmd_print(box_list):
                 offline.append([bv_id, play])
                 continue
         else:
-            print("warning => " , online_str)
+            print("warning => ", online_str)
             online_str = "ERROR"
 
-
         # rate = "{:.2f} %".format(rate_num * 100)
-        # pretty = pretty + flag + online + "\t" + play + "\t" + stay + "\t" +  rate + "\t" + release_time + "  " + bv_id + " " + title + "\n" 
-        pretty = pretty + " " + online_str + "\t" + str(play) + "\t" + str(stay) + "\t"  + \
-                 rtime + "  " + bv_id + "  " +  title + "\n" 
+        # pretty = pretty + flag + online + "\t" + play + "\t" + stay + "\t" + 
+        # rate + "\t" + release_time + "  " + bv_id + " " + title + "\n"
+        pretty = (
+            pretty
+            + " "
+            + online_str
+            + "\t"
+            + str(play)
+            + "\t"
+            + str(stay)
+            + "\t"
+            + rtime
+            + "  "
+            + bv_id
+            + "  "
+            + title
+            + "\n"
+        )
     # print offline
     logger.debug(offline)
-    #print online
+    # print online
     logger.debug(pretty)
+
 
 def monitor(box_list):
     global df
@@ -340,34 +411,42 @@ def monitor(box_list):
         return
     if type(df) == type(None):
         df = pd.DataFrame(box_list)
-        df = df[["bv_id","title","rtime","mtime","online","play","like","stay"]]
+        df = df[["bv_id", "title", "rtime", "mtime", "online", "play", "like", "stay"]]
         df["rtime"] = pd.to_datetime(df["rtime"])
         df["mtime"] = pd.to_datetime(df["mtime"])
 
     else:
         box_df = pd.DataFrame(box_list)
-        box_df = box_df[["bv_id","title","rtime","mtime","online","play","like","stay"]]
+        box_df = box_df[
+            ["bv_id", "title", "rtime", "mtime", "online", "play", "like", "stay"]
+        ]
         box_df["rtime"] = pd.to_datetime(box_df["rtime"])
         box_df["mtime"] = pd.to_datetime(box_df["mtime"])
-        df = pd.concat([df,box_df], ignore_index = True)
+        df = pd.concat([df, box_df], ignore_index=True)
 
-    # print(df.set_index("bv_id")["title"].to_dict())
-
-    # title_dict = df.set_index("bv_id")["title"].to_dict()
-    # print(title_dict)
-
-    # df = pd.concat([df, box_df],ignore_index = True)
-    # print(df)
-    # tmp = df[df["bv_id"] == "BV1WT411K7Ti"]
-    # print(df.groupby(['bv_id']).resample("H")["online"].mean())
-
-    a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["online"].mean().round(2)
-    b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["play"].last()
-    c_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"]).resample("H")["stay"].last()
-    m_df = pd.concat([a_se,b_se,c_se], axis=1)
+    a_se = (
+        df.set_index(df["mtime"])
+        .groupby(["bv_id", "rtime"])
+        .resample("H")["online"]
+        .mean()
+        .round(2)
+    )
+    b_se = (
+        df.set_index(df["mtime"])
+        .groupby(["bv_id", "rtime"])
+        .resample("H")["play"]
+        .last()
+    )
+    c_se = (
+        df.set_index(df["mtime"])
+        .groupby(["bv_id", "rtime"])
+        .resample("H")["stay"]
+        .last()
+    )
+    m_df = pd.concat([a_se, b_se, c_se], axis=1)
     # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
     m_df = m_df[(m_df["online"] >= 5)]
-    n_df = m_df.sort_values(by=['rtime','mtime'], ascending=False)
+    n_df = m_df.sort_values(by=["rtime", "mtime"], ascending=False)
     print(n_df)
 
     # a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["online"].last().round(2)
@@ -380,8 +459,6 @@ def monitor(box_list):
     # print(n_df)
 
 
-
-
 def lumos(cmd):
     # print(cmd)
     # res = 0
@@ -390,9 +467,7 @@ def lumos(cmd):
     return res
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # login()
     # comment("BV1XS4y1s7HF")
 

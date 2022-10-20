@@ -10,28 +10,25 @@ from tqdm import tqdm
 
 driver = webdriver.Firefox()
 
-def fetch_videos(user_href):
 
+def fetch_videos(user_href):
 
     driver.maximize_window()
     driver.get(user_href)
 
-
-
-    driver.title # => "Google"
+    driver.title  # => "Google"
     print(driver.title)
     print("login\n")
 
     time.sleep(20)
 
-
     count_old = 0
     for scrollTimes in range(10000):
         # fetch all nodes. Break if no new one
         # video_els = driver.find_elements(By.XPATH, "/html/body/div[1]/div/div[2]/div/div/div[4]/div[1]/div[2]/ul/li[6]/a")
-        video_els = driver.find_elements(By.CLASS_NAME,"ECMy_Zdt")
+        video_els = driver.find_elements(By.CLASS_NAME, "ECMy_Zdt")
         if len(video_els) == 0:
-            video_els = driver.find_elements(By.CLASS_NAME,"Eie04v01")
+            video_els = driver.find_elements(By.CLASS_NAME, "Eie04v01")
         print(len(video_els))
         count_new = len(video_els)
         if count_new == count_old:
@@ -46,14 +43,13 @@ def fetch_videos(user_href):
         time.sleep(1)
         js_down = "window.scrollTo(0,1000000)"
         driver.execute_script(js_down)
-        time.sleep(4) # for flash
-
+        time.sleep(4)  # for flash
 
     # video_els = driver.find_elements(By.CLASS_NAME,"ECMy_Zdt")
-    video_els = driver.find_elements(By.CLASS_NAME,"ECMy_Zdt")
+    video_els = driver.find_elements(By.CLASS_NAME, "ECMy_Zdt")
     if len(video_els) == 0:
-        video_els = driver.find_elements(By.CLASS_NAME,"Eie04v01")
-    
+        video_els = driver.find_elements(By.CLASS_NAME, "Eie04v01")
+
     video_list = []
     for video_el in video_els:
         try:
@@ -65,18 +61,18 @@ def fetch_videos(user_href):
             pass
 
     data = video_list
-    with open("download.json", 'w', encoding='utf-8') as f:
+    with open("download.json", "w", encoding="utf-8") as f:
         json.dump(data, f)
+
 
 def download_videos():
     data = None
-    with open("download.json", 'r', encoding='utf-8') as f:
+    with open("download.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     video_list = data
 
     for video_href in tqdm(video_list):
         download_by_dlpanda(video_href)
-
 
     # for video_link in video_link_list:
     #     cmd = "wget " + video_link
@@ -84,9 +80,9 @@ def download_videos():
 
 
 def get_user():
-    #get user href from file
+    # get user href from file
     data = None
-    with open("download_info.json", 'r', encoding='utf-8') as f:
+    with open("download_info.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     user_href = data["user_href"]
     online_flag = data["online"]
@@ -103,18 +99,20 @@ def download_by_dlpanda(video_href):
     page_href = pre_dlpanda_href + encode_href
     # print(href)
     driver.get(page_href)
-    time.sleep(4) # for flash
-    try: 
-        download_button = driver.find_element(By.XPATH, "/html/body/main/section[1]/div/div/div[2]/div[2]/div/div[2]/a")
+    time.sleep(4)  # for flash
+    try:
+        download_button = driver.find_element(
+            By.XPATH, "/html/body/main/section[1]/div/div/div[2]/div[2]/div/div[2]/a"
+        )
     except:
         print(page_href)
         return
 
     href_attr = download_button.get_attribute("href")
-    download_attr =  download_button.get_attribute("download")
+    download_attr = download_button.get_attribute("download")
     # real_href = "http://dlpanda" + href_attr
-    target_name = download_attr.split(']',1)[1]   # remove [DLpanda]
-    cmd = "wget " + href_attr + " -q -O " + "\"downloads/" + target_name + "\"" 
+    target_name = download_attr.split("]", 1)[1]  # remove [DLpanda]
+    cmd = "wget " + href_attr + " -q -O " + '"downloads/' + target_name + '"'
     lumos(cmd)
 
     # return download_button.get_attribute("href")
@@ -132,8 +130,7 @@ def lumos(cmd):
     return res
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     user_href = get_user()
     if user_href is not None or not os.path.exists("download.json"):
         fetch_videos(user_href)

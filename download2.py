@@ -16,7 +16,7 @@ def login():
     driver.maximize_window()
     driver.get("https://www.douyin.com")
 
-    driver.title # => "Google"
+    driver.title  # => "Google"
     print(driver.title)
     print("login\n")
 
@@ -33,7 +33,7 @@ def fetch_videos(user_mixin):
         skip_list = item["skip_list"]
 
         if "]" in last_id:
-            last_id = last_id.rsplit("]",1)[1]
+            last_id = last_id.rsplit("]", 1)[1]
 
         if skip_flag == True:
             continue
@@ -46,9 +46,9 @@ def fetch_videos(user_mixin):
         for scrollTimes in range(10000):
             # fetch all nodes. Break if no new one
             # video_els = driver.find_elements(By.XPATH, "/html/body/div[1]/div/div[2]/div/div/div[4]/div[1]/div[2]/ul/li[6]/a")
-            video_els = driver.find_elements(By.CLASS_NAME,"ECMy_Zdt")
+            video_els = driver.find_elements(By.CLASS_NAME, "ECMy_Zdt")
             if len(video_els) == 0:
-                video_els = driver.find_elements(By.CLASS_NAME,"Eie04v01")
+                video_els = driver.find_elements(By.CLASS_NAME, "Eie04v01")
             print(len(video_els))
             count_new = len(video_els)
             if count_new == count_old:
@@ -61,35 +61,35 @@ def fetch_videos(user_mixin):
             time.sleep(2)
             js_down = "window.scrollTo(0,1000000)"
             driver.execute_script(js_down)
-            time.sleep(1) # for flash
-
+            time.sleep(1)  # for flash
 
         # video_els = driver.find_elements(By.CLASS_NAME,"ECMy_Zdt")
-        video_els = driver.find_elements(By.CLASS_NAME,"ECMy_Zdt")
+        video_els = driver.find_elements(By.CLASS_NAME, "ECMy_Zdt")
         if len(video_els) == 0:
-            video_els = driver.find_elements(By.CLASS_NAME,"Eie04v01")
-
+            video_els = driver.find_elements(By.CLASS_NAME, "Eie04v01")
 
         top_count = 0
         for video_el in video_els:
             try:
-                video_href = video_el.find_element(By.XPATH, "./a").get_attribute("href")
+                video_href = video_el.find_element(By.XPATH, "./a").get_attribute(
+                    "href"
+                )
                 video_id = video_href.rsplit("/", 1)[1]
                 if top_count >= 3:
                     if last_id.isdigit():
                         if int(video_id) <= int(last_id):
-                            print(video_id," => break")
+                            print(video_id, " => break")
                             break
                 else:
                     top_count = top_count + 1
                     if last_id.isdigit():
                         if int(video_id) <= int(last_id):
-                            print(video_id," => continue")
+                            print(video_id, " => continue")
                             continue
                 # video_href = video_el.get_attribute("href")
                 # print(video_href)
                 if video_id in skip_list:
-                    print(video_id," => skip")
+                    print(video_id, " => skip")
                     continue
                 print(video_id)
                 video_list.append(video_id)
@@ -98,18 +98,18 @@ def fetch_videos(user_mixin):
                 pass
 
     data = video_list
-    with open("download.json", 'w', encoding='utf-8') as f:
+    with open("download.json", "w", encoding="utf-8") as f:
         json.dump(data, f)
+
 
 def download_videos():
     data = None
-    with open("download.json", 'r', encoding='utf-8') as f:
+    with open("download.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     video_list = data
     for video_id in alive_it(video_list):
         download_by_dlpanda(video_id)
         # bar()
-
 
     # for video_link in video_link_list:
     #     cmd = "wget " + video_link
@@ -117,9 +117,9 @@ def download_videos():
 
 
 def get_mixin():
-    #get user href from file
+    # get user href from file
     data = None
-    with open("download_info.json", 'r', encoding='utf-8') as f:
+    with open("download_info.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     user_mixin = data["detail"]
     online_flag = data["online"]
@@ -137,19 +137,21 @@ def download_by_dlpanda(video_id):
     page_href = pre_dlpanda_href + encode_href
     # print(href)
     driver.get(page_href)
-    time.sleep(4) # for flash
+    time.sleep(4)  # for flash
     try:
-        download_button = driver.find_element(By.XPATH, "/html/body/main/section[1]/div/div/div[2]/div[2]/div/div[2]/a")
+        download_button = driver.find_element(
+            By.XPATH, "/html/body/main/section[1]/div/div/div[2]/div[2]/div/div[2]/a"
+        )
     except:
         print(page_href)
         return
 
     href_attr = download_button.get_attribute("href")
-    download_attr =  download_button.get_attribute("download")
+    download_attr = download_button.get_attribute("download")
     # real_href = "https://dlpanda" + href_attr
-    target_name = download_attr.split(']',1)[1]   # remove [DLpanda]
-    # cmd = "wget " + href_attr + " -q -O " + "\"downloads/" + target_name + "\"" 
-    cmd = "curl -s -o " + "\"downloads/" + target_name + "\" " + href_attr
+    target_name = download_attr.split("]", 1)[1]  # remove [DLpanda]
+    # cmd = "wget " + href_attr + " -q -O " + "\"downloads/" + target_name + "\""
+    cmd = "curl -s -o " + '"downloads/' + target_name + '" ' + href_attr
     lumos(cmd)
 
     # return download_button.get_attribute("href")
@@ -167,8 +169,7 @@ def lumos(cmd):
     return res
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     user_mixin = get_mixin()
 
     if user_mixin is not None or not os.path.exists("download.json"):
