@@ -15,7 +15,7 @@ from alive_progress import alive_bar, alive_it
 from loguru import logger
 
 # package : poetry run pyinstaller dashboard.py --onefile --collect-all grapheme
-# action : grapheme
+# action : grapheme for alive_progress
 
 import pandas as pd
 
@@ -86,11 +86,12 @@ def launch():
         # box.append([bv_id, online, play, like, coin, star, release_time, title])
         # bv_dict = get_data(bv_id)
         bv_dict = get_api(bv_id)
-        if bv_dict == {}:
+        if bv_dict == {} or bv_dict == None:
             print([bv_id," => skip"] )
             continue
         bv_dict["bv_id"] = bv_id
         box.append(bv_dict)
+        # time.sleep(1)  # for cid api should not be too fast
         # bar()
     cmd_print(box)
     # box is  [ { } , { } ]
@@ -178,29 +179,31 @@ def get_data(bv_id):
 def get_api(bv_id):
     ticktock = pendulum.now("Asia/Shanghai")
 
-    cid_url = "https://api.bilibili.com/x/player/pagelist"
-    payload = {"bvid": bv_id}
-    r = requests.get(cid_url,params=payload)
-    if r.status_code != 200:
-        return
-    res = r.json()
-    c_id = res["data"][0]["cid"]
+    # # get cid
+    # cid_url = "https://api.bilibili.com/x/player/pagelist"
+    # payload = {"bvid": bv_id}
+    # r = requests.get(cid_url,params=payload)
+    # if r.status_code != 200:
+    #     print("cid skip")
+    #     return
+    # res = r.json()
+    # if res == None:
+    #     print("cid skip")
+    #     return
+    # cid = res["data"][0]["cid"]
 
-    online_url = "http://api.bilibili.com/x/player/online/total"
-    payload = {"bvid": bv_id, "cid": c_id}
-    r = requests.get(online_url,params=payload)
-    if r.status_code != 200:
-        return
-    res = r.json()
-    online_str = res["data"]["total"]
-    online =  pretty_num(online_str)
 
     view_url = "http://api.bilibili.com/x/web-interface/view"
     payload = {"bvid": bv_id}
     r = requests.get(view_url,params=payload)
     if r.status_code != 200:
+        print("view skip")
         return
     res = r.json()
+    if not check_res(res):
+        print("view skip")
+        return
+    cid = res["data"]["cid"] # maybe not stable
     title_str = res["data"]["title"][:30]
     rtime_num = res["data"]["pubdate"]
     rtime = pendulum.from_timestamp(rtime_num, tz="Asia/Shanghai")
@@ -217,6 +220,20 @@ def get_api(bv_id):
     # print(now_rank)
     # print(evaluation_str)
     stay, rate = stay_rate(play, like, coin, star)
+
+    # online data
+    online_url = "http://api.bilibili.com/x/player/online/total"
+    payload = {"bvid": bv_id, "cid": cid}
+    r = requests.get(online_url,params=payload)
+    if r.status_code != 200:
+        print("online skip")
+        return
+    res = r.json()
+    if not check_res(res):
+        print("online skip")
+        return
+    online_str = res["data"]["total"]
+    online =  pretty_num(online_str)
 
     output_dict = { "online": online - 1,
                     "play": play,
@@ -235,18 +252,14 @@ def stay_rate(play_num, like_num, coin_num, star_num):
     if play_num == 0:
         return 0, 0
 
-    if play_num < 50:
-        stay_num = 0
-        rate_num = 0
-    else:
-        stay_num = like_num + star_num + coin_num * 5
-        rate_num = stay_num / play_num
+    stay_num = like_num + star_num + coin_num * 5
+    rate_num = stay_num / play_num
 
     return stay_num , rate_num
 
 def pretty_num(origin_str):
     if origin_str in [" ","  ","-","点赞","投币","收藏"]:
-        output_num = 0  
+        output_num = 0
     elif not origin_str.isdigit():
         tmp_str = origin_str[:-1]
         output_num = int(float(tmp_str) * 10000)
@@ -254,8 +267,24 @@ def pretty_num(origin_str):
         output_num = int(origin_str)
     return output_num
 
+def check_res(json_dict):
+    if type(json_dict) != type({}):
+        print(json_dict)
+        # raise
+        return
+    if "code" not in json_dict or "data" not in json_dict:
+        print(json_dict)
+        # raise
+        return
+    if json_dict["code"] != 0:
+        print(json_dict)
+        # raise
+        return
+    return True
+
 def cmd_print(box_list):
     pretty = "Current Dashboard Data \n"
+    pretty += " flag\tplay\tstray\trtime\t\t     bv_id\n"
     offline = []
     for item in box_list:
         # bv_id, online, play, like, coin, star, release_time, title  = item
@@ -299,7 +328,7 @@ def cmd_print(box_list):
         # rate = "{:.2f} %".format(rate_num * 100)
         # pretty = pretty + flag + online + "\t" + play + "\t" + stay + "\t" +  rate + "\t" + release_time + "  " + bv_id + " " + title + "\n" 
         pretty = pretty + " " + online_str + "\t" + str(play) + "\t" + str(stay) + "\t"  + \
-                 str(rtime) + "  " + bv_id + "  " +  title + "\n" 
+                 rtime + "  " + bv_id + "  " +  title + "\n" 
     # print offline
     logger.debug(offline)
     #print online
