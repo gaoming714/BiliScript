@@ -215,6 +215,7 @@ def get_data(bv_id):
         "star": star,
         "stay": stay,
         "rate": rate,
+        "duration": duration_num,
         "rtime": rtime.to_datetime_string(),  # to datetime str
         "mtime": ticktock.to_datetime_string(),  # to datetime str
         "title": title_str,
