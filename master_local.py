@@ -16,10 +16,12 @@ from loguru import logger
 SRC = None
 CACHE = None
 CURL_cmd = None
+FFmpeg = "ffmpeg"
 
 FILE_list = []
 MODIFY_list = []
 CONFIG_list = []
+
 
 
 def load():
@@ -52,16 +54,14 @@ def launch():
             FILE_list.append((filename,basename,extname))
     ic(FILE_list)
 
+    ffmpeg_list = []
     for (filename, basename, extname) in FILE_list:
         # default
         outputname = basename + ".mp4"
-        alias = ""
         param = "-crf 17 -c:a copy"
         if filename in MODIFY_list:
+            # skip modity
             continue
-
-        if alias != "":
-            outputname = basename + " " + alias + "." + ".mp4"
         filepath = SRC + "\\" + filename
         cachepath = CACHE + "\\" + outputname
         hashpath = cachepath + ".md5"
@@ -69,9 +69,40 @@ def launch():
         filesafe = " \"" + filepath + "\" "
         cachesafe = " \"" + cachepath + "\" "
 
-        ffmpeg_cmd = "ffmpeg -i" + filesafe + param  + cachesafe
-        # msg("CMD ➜ " + ffmpeg_cmd)
-        lumos(ffmpeg_cmd)
+        ffmpeg_cmd = FFmpeg + " -i" + filesafe + param  + cachesafe
+        ffmpeg_list.append(ffmpeg_cmd)
+
+
+    for info_item in CONFIG_list:
+        if info_item['file'] not in ls_list:
+            print("skip => ", info_item['file'])
+            continue
+
+        filename = info_item['file']
+        alias = info_item['alias']
+        param = info_item['param']
+        (basename, extname) = filename.rsplit('.',1)
+
+        if alias == "":
+            outputname = basename + ".mp4"
+        else:
+            outputname = basename + " " + alias  + ".mp4"
+        if param == "":
+            param = "-crf 17 -c:a copy"
+        filepath = SRC + "\\" + filename
+        cachepath = CACHE + "\\" + outputname
+        hashpath = cachepath + ".md5"
+
+        filesafe = " \"" + filepath + "\" "
+        cachesafe = " \"" + cachepath + "\" "
+
+        ffmpeg_cmd = FFmpeg + " -i" + filesafe + param  + cachesafe
+        ffmpeg_list.append(ffmpeg_cmd)
+
+
+    ic(ffmpeg_list)
+    for item_cmd in ffmpeg_list:
+        lumos(item_cmd)
 
         # createhash(cachepath)
         # filesync(cachepath)
@@ -99,7 +130,8 @@ def createhash(filepath):
 def lumos(cmd):
     # print(cmd)
     # res = 0
-    msg("CMD => " + cmd)
+    pre = "\n♾️   "
+    logger.debug(pre + cmd)
     res = os.system(cmd)
     return res
 
@@ -123,14 +155,18 @@ def precheck():
             raise Exception("Missing " + filepath)
     print("==== Precheck is OK ====")
 
-def msg(content):
-    # onli str
-    pretty = "\n" + content + "\n"
-    logger.debug(pretty)
+def pretty_ffmpeg():
+    global FFmpeg
+    try:
+        if os.system("ffmpeg-bar -h") == 0:
+            FFmpeg = "ffmpeg-bar"
+    except:
+        pass
 
 
 if __name__ == '__main__':
     load()
+    pretty_ffmpeg()
     # precheck()
     print("Source PATH: \t" + SRC)
     print("Output PATH: \t" + CACHE)

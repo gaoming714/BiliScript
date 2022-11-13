@@ -97,7 +97,8 @@ def createhash(filepath):
 def lumos(cmd):
     # print(cmd)
     # res = 0
-    msg("CMD => " + cmd)
+    pre = "\n♾️   "
+    logger.debug(pre + cmd)
     res = os.system(cmd)
     return res
 
@@ -120,12 +121,6 @@ def precheck():
         if not os.path.exists(filepath):
             raise Exception("Missing " + filepath)
     print("==== Precheck is OK ====")
-
-def msg(content):
-    # onli str
-    pretty = "\n" + content + "\n"
-    logger.debug(pretty)
-
 
 if __name__ == '__main__':
     load()
