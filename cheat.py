@@ -49,7 +49,7 @@ def login():
 
     print(driver.title)
     print("Please login \n")
-
+    driver.save_screenshot('./BiliLogin.png') # screenshot to login
     wait = WebDriverWait(driver, 120)
     first_result = wait.until(
         ExpC.presence_of_element_located((By.CLASS_NAME, "header-entry-mini"))
@@ -61,7 +61,7 @@ def login():
 def launch():
     ticktock = pendulum.now("Asia/Shanghai")
     # print(ticktock)
-    print("=> ", ticktock.to_datetime_string())
+    print("📌   ", ticktock.to_datetime_string())
     user_id = "30978137"
     # video_list = fetch_user(user_id, limit = 30)
     video_list = fetch_user_api(user_id)
@@ -123,7 +123,10 @@ def play_video(bv_id, duration = 15):
     ticktock = pendulum.now("Asia/Shanghai")
     time.sleep(duration * 0.1)
     # action()
-    time.sleep(duration * 0.8)
+    action_ad(duration * 0.1)
+    # play in this video
+    if bv_id in driver.current_url:
+        time.sleep(duration * 0.8)
     return
 
 
@@ -238,60 +241,41 @@ def lumos(cmd):
     res = os.system(cmd)
     return res
 
+def action_ad(remain):
+    ad_els = driver.find_elements(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[4]/a/div/img")
+    if ad_els == []:
+        print("no ad")
+        return
+    ad_el = ad_els[0]
+    ad_el.click()
+    driver.switch_to.window(driver.window_handles[-1])
+    time.sleep(5)
+    driver.close()
+    driver.switch_to.window(driver.window_handles[0])
+    if remain > 5:
+        time.sleep(remain-5+1)
+
 def action():
-    hasher = hashlib.md5()
-    hasher.update(url.encode('utf-8'))
-    hashhex = hasher.hexdigest()
+    # hasher = hashlib.md5()
+    # hasher.update(url.encode('utf-8'))
+    # hashhex = hasher.hexdigest()
 
-    like_els = driver.find_elements(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[1]")
-    if like_els == []:
+    input_els = driver.find_elements(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[2]/div[2]/div/div/div[1]/div[2]/div/div[2]/div[3]/div[1]/input")
+    if input_els == []:
         return
-    like_el = like_els[0]
-    # if like_el.get_attribute("class") != "like on":
-    #     try:
-    #         like_el.click()
-    #     except:
-    #         return
-    #     # print("Debug ➜ like + 1")
-    # else:
-    #     # have liked
-    #     # print("Debug ➜ like ====  else")
-    #     return
-    
-    ## comment
-    # time.sleep(1)
-    # driver.get(url)
-    # time.sleep(3)
-    try:
-        input_el = driver.find_element(By.CLASS_NAME, "reply-box-textarea")
-        input_el.click()
+    input_el = input_els[0]
+    input_el.click()
+    input_el.send_keys("从水下第一个生命的萌芽开始……到石器时代的巨型野兽……")
+    time.sleep(1)
+    input_el.send_keys(Keys.ENTER)
 
-    except:
-        return
-    # if like_el.get_attribute("class") != "like on":
-    #     like_el.click()
-
-    try:
-        input_el.send_keys("已赞，感谢点赞 ↓↓↓ 视频 ※ 感谢 =>  " + hashhex)
-        input_el.send_keys(Keys.ENTER)
-        input_el.send_keys("https://www.bilibili.com/video/BV1oT411K7yS/")
-        input_el.send_keys(Keys.ENTER)
-        input_el.send_keys("https://www.bilibili.com/video/BV1ND4y1i7Z5/")
-        input_el.send_keys(Keys.ENTER)
-        input_el.send_keys("https://www.bilibili.com/video/BV17W4y1B7yN/")
-        time.sleep(3)
-        send_el = driver.find_element(By.CLASS_NAME, "send-text")
-        send_el.click()
-        # print("Debug ➜ comment + 1")
-    except:
-        # print("Debug ➜ comment ====   else")
-        return
 
 if __name__ == "__main__":
     # login()
     # comment("BV1XS4y1s7HF")
     # launch()
     # login()
+    # options.add_argument("-headless")  # headless
     while True:
         launch()
         time.sleep(60)
