@@ -76,7 +76,7 @@ def login():
 def launch():
     ticktock = pendulum.now("Asia/Shanghai")
     # print(ticktock)
-    print("=> ", ticktock.to_datetime_string())
+    print("📌   ", ticktock.to_datetime_string())
     user_id = "30978137"
     # video_list = fetch_user(user_id, limit = 30)
     video_list = fetch_user_api(user_id)
