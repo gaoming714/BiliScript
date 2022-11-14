@@ -463,7 +463,7 @@ def monitor(box_list):
 def lumos(cmd):
     # print(cmd)
     # res = 0
-    pre = "\n♾️   "
+    pre = "\n🧪   "
     logger.debug(pre + cmd)
     res = os.system(cmd)
     return res
