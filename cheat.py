@@ -49,6 +49,7 @@ def login():
 
     print(driver.title)
     print("Please login \n")
+    time.sleep(2)
     driver.save_screenshot('./BiliLogin.png') # screenshot to login
     wait = WebDriverWait(driver, 120)
     first_result = wait.until(
@@ -243,15 +244,17 @@ def lumos(cmd):
 
 def action_ad(remain):
     ad_els = driver.find_elements(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[4]/a/div/img")
-    if ad_els == []:
+    if ad_els != []:
+        ad_el = ad_els[0]
+        ad_el.click()
+        driver.switch_to.window(driver.window_handles[-1])
+        time.sleep(5)
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
+    else:
         print("no ad")
-        return
-    ad_el = ad_els[0]
-    ad_el.click()
-    driver.switch_to.window(driver.window_handles[-1])
-    time.sleep(5)
-    driver.close()
-    driver.switch_to.window(driver.window_handles[0])
+        time.sleep(5)
+        pass
     if remain > 5:
         time.sleep(remain-5+1)
 
@@ -271,7 +274,7 @@ def action():
 
 
 if __name__ == "__main__":
-    # login()
+    login()
     # comment("BV1XS4y1s7HF")
     # launch()
     # login()

@@ -28,9 +28,8 @@ from selenium.webdriver.support import expected_conditions as ExpC
 
 import requests
 
-SRC_audio = "inputAudio"
-SRC_video = "inputVideo"
-DIST = "output"
+USER_ID = ""
+EXT_list = []
 
 FILE_list = None
 
@@ -45,18 +44,13 @@ wait = WebDriverWait(driver, 10)
 
 
 def load():
-    pass
-    # global SRC
-    # global DIST
-    # global CURL_cmd
-    # global FILE_list
-    # data = None
-    # with open("info.json", 'r', encoding='utf-8') as f:
-    #     data = json.load(f)
-    #     SRC = data["src"]
-    #     DIST = data["dist"]
-    #     CURL_cmd = data["curlCmd"]
-    #     FILE_list = data["infoArr"]
+    global USER_ID
+    global EXT_list
+    data = None
+    with open("dashboard.json", 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        USER_ID = data["user_id"]
+        EXT_list = data["ext_list"]
 
 
 def login():
@@ -77,9 +71,9 @@ def launch():
     ticktock = pendulum.now("Asia/Shanghai")
     # print(ticktock)
     print("📌   ", ticktock.to_datetime_string())
-    user_id = "30978137"
+    # user_id = "30978137"
     # video_list = fetch_user(user_id, limit = 30)
-    video_list = fetch_user_api(user_id)
+    video_list = fetch_user_api(USER_ID)
     ext_videos(video_list)  # add some special BV _ id
     # print(video_list)
     box = []
@@ -143,8 +137,7 @@ def fetch_user_api(user_id, limit=30):
 
 
 def ext_videos(video_list):
-    ext_list = ["BV1WT411K7Ti", "BV1uT411P7Nq"]
-    for id_item in ext_list:
+    for id_item in EXT_list:
         if id_item not in video_list:
             video_list.append(id_item)
 
@@ -401,7 +394,7 @@ def cmd_print(box_list):
             + "\n"
         )
     # print offline
-    logger.debug(offline)
+    # logger.debug(offline)
     # print online
     logger.debug(pretty)
 
@@ -448,7 +441,8 @@ def monitor(box_list):
     # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
     m_df = m_df[(m_df["online"] >= 5)]
     n_df = m_df.sort_values(by=["rtime", "mtime"], ascending=False)
-    print(n_df)
+    if len(n_df.index) > 0:
+        print(n_df)
 
     # a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["online"].last().round(2)
     # b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["play"].last()
@@ -470,6 +464,7 @@ def lumos(cmd):
 
 
 if __name__ == "__main__":
+    load()
     # login()
     # comment("BV1XS4y1s7HF")
 
