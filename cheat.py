@@ -51,12 +51,13 @@ def login():
     print("Please login \n")
     time.sleep(2)
     driver.save_screenshot('./BiliLogin.png') # screenshot to login
-    wait = WebDriverWait(driver, 120)
-    first_result = wait.until(
-        ExpC.presence_of_element_located((By.CLASS_NAME, "header-entry-mini"))
-    )
-
-    print("done")
+    try:
+        first_result = WebDriverWait(driver, 120).until(
+            ExpC.presence_of_element_located((By.CLASS_NAME, "header-entry-mini"))
+        )
+        print("🔑  Login Success")
+    except:
+        print("🔑  Login Anonymous")
 
 
 def launch():
@@ -243,7 +244,7 @@ def lumos(cmd):
     return res
 
 def action_ad(remain):
-    ad_els = driver.find_elements(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[4]/a/div/img")
+    ad_els = driver.find_elements(By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[4]/a")
     if ad_els != []:
         ad_el = ad_els[0]
         ad_el.click()
