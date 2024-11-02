@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 import boxDB
 import jsonDB
 import sqliteDB
-import mQueue
+# import mQueue
 import queue
 import sqlite3
 from util import (
@@ -29,7 +29,7 @@ from util import (
     check_intact,
 )
 
-logConfig("logs/download.log", rotation="10 MB", level="DEBUG", lite=True)
+logConfig("logs/download.log", rotation="10 MB", level="DEBUG", mode=1)
 
 
 # multithreading semaphore
