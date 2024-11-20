@@ -23,7 +23,6 @@ def launch():
     clip_folder = Path("data/clips")
     clip_folder.mkdir(parents=True, exist_ok=True)  # 确保输出文件夹存在
 
-
     # 获取 raw_folder 文件夹下的所有 .mp4 文件
     raw_list = list(raw_folder.glob('**/*.mp4'))
 
@@ -41,11 +40,11 @@ def launch():
 
 def listen(mp4_file):
     srt_folder = mp4_file.parent
-    magic_str = (
+    magic = (
         f'faster-whisper-xxl.exe {mp4_file}' 
         f' --language=Chinese --model=medium --output_dir={srt_folder}'
     )
-    lumos(magic_str)
+    lumos(magic)
 
 def parse_srt(file_path):
     """

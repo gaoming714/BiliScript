@@ -13,34 +13,31 @@ from util import (
     Nox
 )
 
-logConfig("logs/download.log", rotation="10 MB", level="DEBUG", mode=1, tqdm_hold=True)
+logConfig("logs/concat.log", rotation="10 MB", level="DEBUG", mode=1)
 
-def get_bpm(audio_file):
-    y, sr = librosa.load(audio_file)
-    tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-    return tempo[0]
+"""
+根据BGM改编切片的速度，并拼接
+视频在clips中
+BGm在audio中
+cache工作目录
+最终文件 dist
+"""
+
 
 def launch():
     clip_folder = Path('data/clips')
     mp4_list = list(clip_folder.glob('**/*.mp4'))
     random.shuffle(mp4_list)
-    audio_path = Path() / "data" / "audio" / "bgm.mp4"
+    mp4_list = mp4_list[:8]
+    audio_path = Path() / "data" / "audio" / "drop.aac"
     speed_video(mp4_list, audio_path)
-    add_bgm()
+    add_bgm(audio_path)
     copy_to_dist()
 
-def add_bgm(volume = 1):
-    video_path = Path() / "cache" / "concat.mp4"
-    audio_path = Path() / "data" / "audio" / "bgm.mp4"
-    output_file = Path() / "cache" / "final.mp4"
-
-    input_files = f'-i {video_path} -i {audio_path}' 
-    mana = (
-        f'{ffmpeg} {input_files} '
-        f'-c:v copy -c:a aac -map 0:v:0 -map 1:a:0 '
-        f'-filter:a "volume={volume}" -shortest {output_file}'
-    )
-    lumos(mana)
+def get_bpm(audio_file):
+    y, sr = librosa.load(audio_file)
+    tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+    return tempo[0]
 
 def speed_video(mp4_list, baseline_path):
     baseline = get_bpm(baseline_path)
@@ -61,12 +58,24 @@ def speed_video(mp4_list, baseline_path):
         concat_parts.extend([f"[v{i}]", f"[a{i}]"])
 
     filter_complex = "; ".join(filter_parts) + f"; {''.join(concat_parts)}concat=n={len(mp4_list)}:v=1:a=1[v][a]"
-    mana = (
+    magic = (
         f'{ffmpeg} {input_files} '
         f'-filter_complex "{filter_complex}" '
-        f'-map "[v]" -map "[a]" -c:v libx264 -c:a aac {output_file}'
+        f'-map "[v]" -map "[a]" -c:v libx264 -c:a aac -r 60 {output_file}'
     )
-    lumos(mana)
+    lumos(magic)
+
+def add_bgm(audio_path, volume = 1):
+    video_path = Path() / "cache" / "concat.mp4"
+    output_file = Path() / "cache" / "final.mp4"
+
+    input_files = f'-i {video_path} -i {audio_path}' 
+    magic = (
+        f'{ffmpeg} {input_files} '
+        f'-c:v copy -c:a aac -map 0:v:0 -map 1:a:0 '
+        f'-filter:a "volume={volume}" -shortest {output_file}'
+    )
+    lumos(magic)
 
 def copy_to_dist():
     # copy to dist
@@ -77,16 +86,19 @@ def copy_to_dist():
     source_path = Path("cache/final.mp4")
     dist_path = Path("dist") / (now_iso + ".mp4")
     # 确保 dist 目录存在，如果不存在则创建
+    if not source_path.exists():
+        logger.error(f"{source_path} missing.")
     dist_path.parent.mkdir(parents=True, exist_ok=True)
-
-    for attempt in range(3):
-        if source_path.exists() and source_path.stat().st_size > 50:
-            logger.debug(f"File '{source_path}' has a valid size.")
-            break  # 文件有大小，退出函数
-        logger.debug(f"Attempt {attempt + 1}: File '{source_path}' is empty or does not exist. Retrying in 3 seconds...")
-        time.sleep(3)
+    time.sleep(1)
     shutil.copy(source_path, dist_path)
 
+    if dist_path.exists():
+        logger.success(f"{dist_path}")
+    else:
+        logger.error(f"{dist_path} Missing")
+
+
 if __name__ == '__main__':
-    clean_cache()
-    launch()
+    for _ in range(100):
+        clean_cache()
+        launch()

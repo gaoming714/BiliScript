@@ -154,7 +154,7 @@ def set_datetime(record):
     record["extra"]["datetime"] = pendulum.now("Asia/Shanghai").to_iso8601_string()[:22]
 
 
-def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode=0, tqdm_hold=False):
+def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode=2, tqdm_hold=True):
     """
     配置 Loguru 日志记录
     :param log_level: 日志级别，如 "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
@@ -173,14 +173,14 @@ def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode
     if mode == 0:
         style = (
             " [ <level>{level: <8}</level>] "
-            + "<green>🧀 </green>"
+            + "<green>❯ </green>"
             + "<level>{message}</level>"
         )
     if mode == 1:
         style = (
             "<green>{extra[datetime]}</green>"
             + " [ <level>{level: <8}</level>] "
-            + "<green>🧀 </green>"
+            + "<green>❯ </green>"
             + "<level>{message}</level>"
         )
     else:
@@ -188,10 +188,10 @@ def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode
             "<green>{extra[datetime]}</green>"
             + " [ <level>{level: <8}</level>] "
             + "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan>"
-            + "<green>🧀 </green>"
+            + "<green>❯ </green>"
             + "<level>{message}</level>"
         )
-    # alternative ➲ ⛏ ☄ ➜ ♻ ✨ 🧀
+    # alternative ➲ ⛏ ☄ ➜ ♻ ✨ 🧀 ❯
     logger.configure(patcher=set_datetime)
     if tqdm_hold == True:
         stdout = lambda msg: tqdm.write(msg, end="")

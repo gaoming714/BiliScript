@@ -50,7 +50,7 @@ def launch():
     # concat
     input_files = " ".join([f"-i {video}" for video in mp4_list])
     output_file = Path("cache/concat.mp4")
-    # magic_str = (
+    # magic = (
     #     f'{ffmpeg} {input_files}'
     #     f' -filter_complex "'
     #     f' [0:v]setpts=PTS/1.4[v1]; [0:a]atempo=1.4,volume=0.5[a1];'
@@ -71,18 +71,18 @@ def launch():
     filter_complex = "; ".join(filter_parts) + f"; {''.join(concat_parts)}concat=n={len(mp4_list)}:v=1:a=1[v][a]"
 
     # 构建完整的 ffmpeg 命令
-    magic_str = (
+    magic = (
         f'{ffmpeg} {input_files} '
         f'-filter_complex "{filter_complex}" '
         f'-map "[v]" -map "[a]" {output_file}'
     )
 
-    lumos(magic_str)
-    magic_str = ""
+    lumos(magic)
+    magic = ""
 
     # add bgm
     input_files = "-i cache/concat.mp4 -i data/audio/bgm.aac" 
-    magic_str = (
+    magic = (
         f'{ffmpeg} {input_files}' 
         f' -filter_complex "'
         f' [1:a]aloop=loop=-1:size=2e+9,volume=0.6[aud];'
@@ -91,28 +91,28 @@ def launch():
         f' -c:v copy -shortest cache/withbgm.mp4'
     )
 
-    lumos(magic_str)
-    magic_str = ""
+    lumos(magic)
+    magic = ""
 
     # create subtitle
-    magic_str = (
+    magic = (
             f'faster-whisper-xxl.exe cache/withbgm.mp4' 
             f' --language=Chinese --model=medium --output_dir=cache'
         )
-    lumos(magic_str)
-    magic_str = ""
+    lumos(magic)
+    magic = ""
 
     # add subtitle
     # create srt
     # "subtitles=cache/withbgm.srt:force_style='Fontname=$(pwd)/qingyin.ttf,Fontsize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H000000FF,Outline=1,Shadow=1,ShadowColour=&H00000000'"
-    magic_str = (
+    magic = (
             f'ffmpeg -i cache/withbgm.mp4' 
             # f' -vf subtitles=cache/withbgm.srt '
             f' -vf "subtitles=cache/withbgm.srt:force_style=\'Fontname=SimSun,Fontsize=16,PrimaryColour=&H00FFFFFF,OutlineColour=&H000000FF,Outline=1,Shadow=1,ShadowColour=&H00000000,Alignment=2,MarginV=10\'" '
             f' cache/output_video.mp4'
         )
-    lumos(magic_str)
-    magic_str = ""
+    lumos(magic)
+    magic = ""
 
     # copy to dist
     now = pendulum.now("Asia/Shanghai")

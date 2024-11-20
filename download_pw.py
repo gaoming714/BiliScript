@@ -12,8 +12,6 @@ from playwright.sync_api import sync_playwright
 
 import requests
 from bs4 import BeautifulSoup
-import boxDB
-import jsonDB
 import sqliteDB
 # import mQueue
 import queue
@@ -27,6 +25,7 @@ from util import (
     create_hash,
     check_hash,
     check_intact,
+    Nox
 )
 
 logConfig("logs/download.log", rotation="10 MB", level="DEBUG", mode=1)
@@ -41,37 +40,62 @@ logConfig("logs/download.log", rotation="10 MB", level="DEBUG", mode=1)
 max_threads = 1
 semaphore = threading.BoundedSemaphore(max_threads)
 TQ = queue.Queue()
-# MQ = []
 
-# import warnings
-# from tqdm.std import TqdmExperimentalWarning
-# warnings.filterwarnings("ignore", category=TqdmExperimentalWarning)
-MAIN_PATH = Path("./downloads")
+
+MAIN_PATH = None # default ./downloads
 USER = []
 MANUAL = []
-
-
-## python pure BOX(dict) ##
-# conn = BOX
-# mainDB = sqliteDB
-
-## DB json ##
-# conn = Path("db.json")
-# mainDB = sqliteDB
+cookie_path = Path() / "cookies" / "download.json"
 
 ## sqlite ##
 conn = sqlite3.connect("db.sqlite3")
-mainDB = sqliteDB
+# mainDB = sqliteDB
 
 def launch():
-    if not Path("state.json").exists():
-        store_cookie()
-    # download_manual(MANUAL)
-    # download_queue()
-    fetch_user()
+    if not cookie_check(cookie_path):
+        cookie_create(cookie_path)
+    
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=False)
+        context = browser.new_context(storage_state=Path(cookie_path))
+        page = context.new_page()
+        for user in USER:
+            video_online_vid_list = scrapy_video(page, user["url"])
+            folder = MAIN_PATH / user["symbol"]
+            if not check_folder(folder, True):
+                logger.error(f"No Folder {folder}")
+                continue
+            for vid in video_online_vid_list:
+                v_path = folder / f"{user["symbol"]}.{vid}.mp4"
+                result = sqliteDB.fetch_db_by_vid(conn, "douyin", vid=vid)
+                el = {}
+                el["vid"] = vid
+                el["symbol"] = user["symbol"]
+                el["nickname"] = user["nickname"]
+                el["md5"] = ""
+                if result:
+                    if check_hash(v_path, result["md5"]):
+                        logger.debug(f"Hash match ID {vid}")
+                        continue
+                    elif result["md5"] == "":
+                        logger.debug(f"Empty ID {vid}")
+                    else:
+                        logger.error(f"Abort ID {vid}")
+                else:
+                    sqliteDB.insert_db(conn, "douyin", el)
+                logger.info(f"MQ for ID {vid}")
+                TQ.put(vid)
+                # if vid not in MQ:
+                #     MQ.append(vid)
 
-    # download_queue()
-    # print(BOX)
+            # 下载队列中的视频
+            download_queue()
+
+
+        # 关闭浏览器
+        browser.close()
+
+
     if type(conn) == sqlite3.Connection:
         conn.close()  # for sqlite only
 
@@ -87,82 +111,64 @@ def boot():
         if not user.get("skip", False):
             USER.append(user)
     MANUAL = config["MANUAL"]
+    sqliteDB.init_db(conn, table="douyin")
+    # print(USER)
 
 
-def store_cookie():
+def cookie_create(cookie_path = Path() / "cookies" / "download.json"):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.firefox.launch(headless=False)
         context = browser.new_context()
         page = context.new_page()
         # page.set_viewport_size({"width": 1280, "height": 720})
         page.goto("https://www.douyin.com/")
-        # page.wait_for_selector("#svg_icon_avatar")
-
         # Scan RQ Manual
-        logger.warning("Please Login~")
-        time.sleep(100)
-        # for i in range(200):
-        #     element = page.query_selector("#svg_icon_avatar")
-        #     if element is None:
-        #         # Login success
-        #         print("Login success")
-        #         break
-        #     time.sleep(1)
-
+        time.sleep(5)
+        while page.locator(".semi-button-primary").first.inner_text() == "登录":
+            logger.warning("Please Login~")
+            time.sleep(3)
+        page.locator('#douyin-header-menuCt').get_by_role("link").nth(-1).hover()
+        time.sleep(1)
+        nick_name = page.locator('.userMenuPanelShadowAnimation').nth(-1).inner_text().split('\n')[0]
+        logger.info(f"Nickname:{nick_name}")
+        time.sleep(1)
         if len(context.cookies()) >= 47:
-            storage = context.storage_state(path="state.json")
+            storage = context.storage_state(path=cookie_path)
             logger.success("Login success. Save to state.json.")
         else:
-            storage = context.storage_state(path="state.json")
+            storage = context.storage_state(path=cookie_path)
             logger.warning("Login fail. Use anonymous mode.")
         browser.close()
 
-
-def fetch_user():
+def cookie_check(cookie_path = Path() / "cookies" / "download.json"):
+    if not cookie_path.exists():
+        return Nox(-1)
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False)
-        context = browser.new_context(storage_state=Path("state.json"))
+        context = browser.new_context(storage_state=Path(cookie_path))
         page = context.new_page()
-        for user in USER:
-            video_online_vid_list = scrapy_video(page, user["url"])
-            folder = MAIN_PATH / user["symbol"]
-            if not check_folder(folder, True):
-                logger.error("No Folder {}".format(folder))
-                continue
-            for vid in video_online_vid_list:
-                v_path = folder / "{}.{}.mp4".format(user["symbol"], vid)
-                result = mainDB.fetch_db_by_vid(conn, vid)
-                el = {}
-                el["vid"] = vid
-                el["symbol"] = user["symbol"]
-                el["nickname"] = user["nickname"]
-                el["md5"] = ""
-                if result:
-                    if check_hash(v_path, result["md5"]):
-                        logger.debug("Hash match ID {}".format(vid))
-                        continue
-                    elif result["md5"] == "":
-                        logger.debug("Empty ID {}".format(vid))
-                    else:
-                        logger.error("Abort ID {}".format(vid))
-                else:
-                    mainDB.insert_db(conn, el)
-                logger.info("MQ for ID {}".format(vid))
-                TQ.put(vid)
-                # if vid not in MQ:
-                #     MQ.append(vid)
+        # page.set_viewport_size({"width": 1280, "height": 720})
+        page.goto("https://www.douyin.com/")
+        time.sleep(7)
+        if page.locator(".semi-button-primary").first.inner_text() == "登录":
+            logger.debug("login fail")
+            if cookie_path.exists():
+                logger.warning(f"cookie out of time delete. {cookie_path}")
+                magic = f"rm {cookie_path}"
+                if len(magic) < 5:
+                    logger.error("rm action")
+                    raise
+                lumos(magic)
+            return Nox(-1)
+        else:
+            logger.debug("login success")
+            page.locator('#douyin-header-menuCt').get_by_role("link").nth(-1).hover()
+            time.sleep(1)
+            nick_name = page.locator('.userMenuPanelShadowAnimation').nth(-1).inner_text().split('\n')[0]
+            logger.info(f"Nickname:{nick_name}")
+            time.sleep(1)
+            return Nox(0)
 
-            # 下载队列中的视频
-            download_queue()
-            # 如果需要显示队列长度，可以取消下面的注释
-            # logger.info(f"当前下载队列长度: {len(MQ)}/20")
-
-        # 关闭浏览器
-        browser.close()
-
-    # 如果需要打印最终的下载队列，可以取消下面的注释
-    # print("最终下载队列:")
-    # print(MQ)
 
 
 def scrapy_video(page, user_url):
@@ -170,8 +176,9 @@ def scrapy_video(page, user_url):
     page.goto(user_url)
     # page.pause()
     time.sleep(4)
-    logger.info("Title: {} \n URL: {}".format(page.title(), user_url))
+    logger.info(f"Title: {page.title()} \n URL: {user_url}")
     if "验证码中间页" in page.title():
+        logger.info("Error 验证码")
         raise
     video_count = 0
     retry_flag = 0
@@ -180,6 +187,7 @@ def scrapy_video(page, user_url):
         video_els = page.locator(".TyuBARdT")
         new_count = video_els.count()
         if new_count == video_count:
+            logger.debug("same length videos")
             if retry_flag <= 2:
                 retry_flag += 1
             else:
@@ -214,15 +222,15 @@ def download_queue():
         pbar = tqdm(total=TQ.qsize())
         while not TQ.empty():
             vid = TQ.get()
-            v = mainDB.fetch_db_by_vid(conn, vid)
+            v = sqliteDB.fetch_db_by_vid(conn, "douyin", vid)
             vid = v["vid"]
             symbol = v["symbol"]
             folder = MAIN_PATH / v["symbol"]
-            v_path = folder / "{}.{}.mp4".format(symbol, vid)
+            v_path = folder / f"{symbol}.{vid}.mp4"
             # check_folder(folder)
             if download_by_dlpanda(vid, symbol, folder):
                 md5sum = create_hash(v_path)
-                mainDB.update_db_by_vid(conn, vid, {"md5": md5sum})
+                sqliteDB.update_db_by_vid(conn, "douyin", vid, {"md5": md5sum})
             pbar.update(1)
         pbar.close()
     else:
@@ -230,11 +238,11 @@ def download_queue():
         pbar = tqdm(total=TQ.qsize())
         while not TQ.empty():
             vid = TQ.get()
-            v = mainDB.fetch_db_by_vid(conn, vid)
+            v = sqliteDB.fetch_db_by_vid(conn, "douyin", vid)
             # vid = v["vid"]
             symbol = v["symbol"]
             folder = MAIN_PATH / v["symbol"]
-            v_path = folder / "{}.{}.mp4".format(symbol, vid)
+            v_path = folder / f"{symbol}.{vid}.mp4"
             # check_folder(folder)
             t = threading.Thread(
                 target=multi,
@@ -255,7 +263,7 @@ def download_manual(vid_list=[]):
 
 
     for vid in tqdm(vid_list):
-        if check_intact(folder / "{}.{}.mp4".format(symbol, vid)):
+        if check_intact(folder / f"{symbol}.{vid}.mp4"):
             continue
         download_by_dlpanda(vid, symbol, folder)
 
@@ -263,16 +271,16 @@ def download_manual(vid_list=[]):
 
 def multi(vid, symbol="_", folder=Path("./downloads"), semaphore=None, pbar=None):
     with semaphore:
-        v_path = folder / "{}.{}.mp4".format(symbol, vid)
+        v_path = folder / f"{symbol}.{vid}.mp4"
         if download_by_dlpanda(vid, symbol, folder):
             md5sum = create_hash(v_path)
             if type(conn) == sqlite3.Connection:
                 connM = sqlite3.connect("db.sqlite3")
-                # mainDB.delete_db_by_vid(connM, vid, table="queue")
-                mainDB.update_db_by_vid(connM, vid, {"md5": md5sum})
+                # sqliteDB.delete_db_by_vid(connM, vid, table="queue")
+                sqliteDB.update_db_by_vid(connM, "douyin", vid, {"md5": md5sum})
                 connM.close()
             else:
-                mainDB.update_db_by_vid(conn, vid, {"md5": md5sum})
+                sqliteDB.update_db_by_vid(conn, "douyin", vid, {"md5": md5sum})
         pbar.update(1)
         return
 
@@ -304,19 +312,19 @@ def download_by_dlpanda(vid, symbol="", path=Path("./downloads")):
         logger.error(target_name_ol)
         return
 
-    target_name = "{}.{}.mp4".format(symbol, vid)
+    target_name = f"{symbol}.{vid}.mp4"
     target_path = path / target_name
-    cmd = "curl -s -k -o '{}' '{}'".format(target_path, source_url)
+    cmd = f"curl -s -k -o '{target_path}' '{source_url}'"
     # logger.debug(cmd)
     for num in range(3):
         if num != 0:
-            logger.warning("Retry \n Retry {} times for ID {}".format(num, vid))
+            logger.warning(f"Retry \n Retry {num} times for ID {vid}")
         lumos(cmd)
         if check_intact(target_path):
-            logger.success("Success {} ".format(vid))
+            logger.success(f"Success {vid} ")
             return True
     record_fail(vid, target_name)
-    logger.error("Fail ID {}".format(vid))
+    logger.error(f"Fail ID {vid}")
     logger.error(source_url)
     logger.error(target_path)
     return
