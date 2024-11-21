@@ -117,7 +117,7 @@ def clean_cache():
     # 定义缓存文件夹路径
     cache_folder = Path('cache')
     now = pendulum.now("Asia/Shanghai")
-    now_iso = now.to_iso8601_string()[:22].replace(":","-")
+    now_iso = now.to_iso8601_string()[:23].replace(":","-")
     # 创建以当前时间命名的子文件夹
     target_dir = cache_folder / now_iso
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -151,7 +151,7 @@ class Nox:
             return f"Status(code={self.code}, error='{self.payload}')"
 
 def set_datetime(record):
-    record["extra"]["datetime"] = pendulum.now("Asia/Shanghai").to_iso8601_string()[:22]
+    record["extra"]["datetime"] = pendulum.now("Asia/Shanghai").to_iso8601_string()[:23]
 
 
 def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode=2, tqdm_hold=True):

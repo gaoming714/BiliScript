@@ -23,7 +23,7 @@ logConfig("logs/default.log", rotation="10 MB", level="DEBUG", mode=1)
 
 Pooh = {}
 
-cookie_path = Path() / "cookies" / "xhs-185.json"
+cookie_path = Path() / "cookies" / "xhs-nt.json"
 
 
 def launch():
@@ -39,8 +39,8 @@ def launch():
         pbar = tqdm(total=len(mp4_list))
         for index, item in enumerate(mp4_list):
             logger.info(f"{item} - Waiting kimiDB")
-            title = kimiDB.fetch("收下这份美女,模特 , 仿写这个标题，不要标点最多20个字")["data"]
-            article = kimiDB.fetch("收下这份美女 ， 模特, 给我一小段小红书文案")["data"]
+            title = kimiDB.fetch("收下这份美女,教你卡点舞动起来 , 仿写这个标题，不要标点最多20个字")["data"]
+            article = kimiDB.fetch("收下这份美女 ， 模特, 给我一小段小红书文案，简短的")["data"]
             key_list = kimiDB.fetch("收下这份美女 , 模特，给我5个关键词")["data"]
             page.goto("https://creator.xiaohongshu.com/publish/publish?from=menu")
             time.sleep(3)
@@ -49,7 +49,7 @@ def launch():
             # magic_text
             magic_text(page, title, article, key_list)
             # pub clock
-            tick = pendulum.parse("2024-11-20 19:00:00")
+            tick = pendulum.parse("2024-11-21 15:00:00")
             target_tick = tick.add(hours=1*index)
             pub_clock(page, str(target_tick))
             # submit

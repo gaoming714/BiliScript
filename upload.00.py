@@ -38,7 +38,7 @@ def launch():
         mp4_list = list(dist_folder.glob('*.mp4'))
         pbar = tqdm(total=len(mp4_list))
         for index, item in enumerate(mp4_list):
-            logger.info("Waiting kimiDB")
+            logger.info(f"{item} - Waiting kimiDB")
             title = kimiDB.fetch("这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题")["data"]
             key_list = kimiDB.fetch("这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词")["data"]
             page.goto("https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload")
@@ -48,11 +48,12 @@ def launch():
             # magic_text
             magic_text(page, title, "article", key_list)
             # pub clock
-            tick = pendulum.parse("2024-11-20 00:00:00")
-            target_tick = tick.add(hours=6*index)
+            tick = pendulum.parse("2024-11-21 15:00:00")
+            target_tick = tick.add(hours=1*index)
             pub_clock(page, str(target_tick))
             # submit
             page.locator(".submit-add").click()
+            logger.success(f"{item}")
             pbar.update(1)
         pbar.close()
 

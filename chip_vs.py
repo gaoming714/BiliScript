@@ -30,7 +30,9 @@ def launch():
     random.shuffle(mp4_list)
     mp4_list = mp4_list[:8]
     audio_path = Path() / "data" / "audio" / "drop.aac"
-    speed_video(mp4_list, audio_path)
+    speed_video(mp4_list, audio_path) # create left and right
+    background_path = Path() / "data" / "video" / "background.mp4"
+    mixin_video(background_path)
     add_bgm(audio_path)
     copy_to_dist()
 
@@ -44,7 +46,8 @@ def speed_video(mp4_list, baseline_path):
     bpm_list = [get_bpm(video) for video in mp4_list]
     # input_files = "-i a.mp4"
     input_files = " ".join([f"-i {file}" for file in mp4_list]) # "-i mp4 -i mp4"
-    output_file = Path() / "cache" / "concat.mp4"
+    output_left_file = Path() / "cache" / "video_left.mp4"
+    output_right_file = Path() / "cache" / "video_right.mp4"
 
     speed_list = [baseline / bpm for bpm in bpm_list]
     speed_list = [max(0.5, min(speed, 100)) for speed in speed_list]
@@ -61,12 +64,38 @@ def speed_video(mp4_list, baseline_path):
     magic = (
         f'{ffmpeg} {input_files} '
         f'-filter_complex "{filter_complex}" '
-        f'-map "[v]" -map "[a]" -c:v libx264 -c:a aac -r 60 {output_file}'
+        f'-map "[v]" -map "[a]" -c:v libx264 -c:a aac -r 60 {output_left_file}'
+    )
+    lumos(magic)
+    magic = (
+        f'{ffmpeg} {input_files} '
+        f'-filter_complex "{filter_complex}" '
+        f'-map "[v]" -map "[a]" -c:v libx264 -c:a aac -r 60 {output_right_file}'
+    )
+    lumos(magic)
+
+def mixin_video(background_path):
+    video_left_path = Path() / "cache" / "video_left.mp4"
+    video_right_path = Path() / "cache" / "video_right.mp4"
+    output_file = Path() / "cache" / "video_mixin.mp4"
+    filter_complex = (
+        "[1:v]scale=iw*1.2:ih*1.2[v1_scaled]; "
+        "[2:v]scale=iw*1.2:ih*1.2[v2_scaled]; "
+        "[0:v][v1_scaled]overlay=x=-400:y=0[bg_v1]; "
+        "[bg_v1][v2_scaled]overlay=x=1520:y=0[final]"
+    )
+
+    input_files = f'-i {background_path} -i {video_left_path} -i {video_right_path}' 
+    magic = (
+        f'{ffmpeg} {input_files} '
+        f'-filter_complex "{filter_complex}" '
+        f'-map "[final]" '
+        f'-t 02:15 -c:v libx264 -c:a aac {output_file}'
     )
     lumos(magic)
 
 def add_bgm(audio_path, volume = 1):
-    video_path = Path() / "cache" / "concat.mp4"
+    video_path = Path() / "cache" / "video_mixin.mp4"
     output_file = Path() / "cache" / "final.mp4"
 
     input_files = f'-i {video_path} -i {audio_path}' 
@@ -99,6 +128,5 @@ def copy_to_dist():
 
 
 if __name__ == '__main__':
-    for _ in range(100):
-        clean_cache()
-        launch()
+    clean_cache()
+    launch()

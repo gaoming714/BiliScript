@@ -116,7 +116,7 @@ def launch():
 
     # copy to dist
     now = pendulum.now("Asia/Shanghai")
-    now_iso = now.to_iso8601_string()[:22].replace(":","-")
+    now_iso = now.to_iso8601_string()[:23].replace(":","-")
 
     # 定义源文件和目标目录
     source_path = Path("cache/output_video.mp4")
