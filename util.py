@@ -172,21 +172,21 @@ def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode
     logger.remove()  # 移除默认的处理程序（如果有的话）
     if mode == 0:
         style = (
-            " [ <level>{level: <8}</level>] "
+            " <level>{level: <8}</level>"
             + "<green>❯ </green>"
             + "<level>{message}</level>"
         )
     if mode == 1:
         style = (
             "<green>{extra[datetime]}</green>"
-            + " [ <level>{level: <8}</level>] "
+            + " <level>{level: <8}</level>"
             + "<green>❯ </green>"
             + "<level>{message}</level>"
         )
     else:
         style = (
             "<green>{extra[datetime]}</green>"
-            + " [ <level>{level: <8}</level>] "
+            + " <level>{level: <8}</level>"
             + "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan>"
             + "<green>❯ </green>"
             + "<level>{message}</level>"
