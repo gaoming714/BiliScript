@@ -22,11 +22,12 @@ def launch():
     mp4_list = list(clip_folder.glob("**/*.mp4"))
     random.shuffle(mp4_list)
     mp4_list = mp4_list[:12]
+    logger.debug("Select: ", mp4_list)
     audio_path = Path() / "data" / "audio" / "bgm.mp4"
-    print(audio_path)
     concat_path = Path() / "cache" / "concat.mp4"
     speed_video(mp4_list, audio_path, concat_path)
     add_bgm(audio_path)
+    add_intro()
     copy_to_dist()
 
 
@@ -70,7 +71,7 @@ def speed_video(mp4_list, baseline_path, output_path):
 
 def add_bgm(audio_path, volume=1):
     video_path = Path() / "cache" / "concat.mp4"
-    output_file = Path() / "cache" / "final.mp4"
+    output_file = Path() / "cache" / "main.mp4"
 
     input_files = f"-i {video_path} -i {audio_path}"
     # audio shortest
@@ -90,6 +91,49 @@ def add_bgm(audio_path, volume=1):
     #     f'-c:v copy -c:a aac '
     #     f'-shortest {output_file}'
     # )
+    lumos(magic)
+
+
+def add_intro(volume=1):
+    logger.debug("add prefix and suffix")
+    prefix_path = Path() / "data" / "video" / "prefix.mp4"
+    suffix_path = Path() / "data" / "video" / "suffix.mp4"
+    video_path = Path() / "cache" / "main.mp4"
+    output_path = Path() / "cache" / "final.mp4"
+
+    mp4_list = [video_path]
+    if prefix_path.exists():
+        mp4_list.insert(0, prefix_path)
+    if suffix_path.exists():
+        mp4_list.append(suffix_path)
+    if len(mp4_list) == 1:
+        logger.debug("No prefix or suffix video.")
+        shutil.copy(video_path, output_path)
+        return
+    logger.debug(mp4_list)
+
+    input_files = " ".join([f"-i {file}" for file in mp4_list])  # "-i mp4 -i mp4"
+
+    filter_parts = []
+    concat_parts = []
+
+    for i in range(len(mp4_list)):
+        filter_parts.append(f"[{i}:v]scale=1080:1920[v{i}]")
+        filter_parts.append(f"[{i}:a]volume={volume}[a{i}]")
+        concat_parts.extend([f"[v{i}]", f"[a{i}]"])
+
+    filter_complex = (
+        "; ".join(filter_parts)
+        + f"; {''.join(concat_parts)}concat=n={len(mp4_list)}:v=1:a=1[v][a]"
+    )
+    magic = (
+        f"{ffmpeg} {input_files} "
+        f'-filter_complex "{filter_complex}" '
+        f'-map "[v]" -map "[a]" '
+        f"-c:v libx264 -c:a aac "
+        f"-r 60 "
+        f"{output_path}"
+    )
     lumos(magic)
 
 
