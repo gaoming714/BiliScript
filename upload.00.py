@@ -9,15 +9,10 @@ import ipdb
 from tenacity import retry, stop_after_attempt
 import requests
 
-import tomlkit
+import tomllib
 import kimiDB
 
-from util import (
-    logConfig,
-    logger,
-    lumos,
-    Nox
-)
+from util import logConfig, logger, lumos, Nox
 
 logConfig("logs/default.log", rotation="10 MB", level="DEBUG", mode=1)
 
@@ -29,27 +24,33 @@ cookie_path = Path() / "cookies" / "bilibili.json"
 def launch():
     if not cookie_check():
         cookie_create()
-    
+
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False)
         context = browser.new_context(storage_state=Path(cookie_path))
         page = context.new_page()
-        dist_folder = Path('dist')
-        mp4_list = list(dist_folder.glob('*.mp4'))
+        dist_folder = Path("dist")
+        mp4_list = list(dist_folder.glob("*.mp4"))
         pbar = tqdm(total=len(mp4_list))
         for index, item in enumerate(mp4_list):
             logger.info(f"{item} - Waiting kimiDB")
-            title = kimiDB.fetch("这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题")["data"]
-            key_list = kimiDB.fetch("这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词")["data"]
-            page.goto("https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload")
+            title = kimiDB.fetch(
+                "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题"
+            )["data"]
+            key_list = kimiDB.fetch(
+                "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词"
+            )["data"]
+            page.goto(
+                "https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload"
+            )
             time.sleep(2)
-            #upload file
+            # upload file
             upload_file(page, 0, item)
             # magic_text
             magic_text(page, title, "article", key_list)
             # pub clock
             tick = pendulum.parse("2024-11-21 15:00:00")
-            target_tick = tick.add(hours=1*index)
+            target_tick = tick.add(hours=1 * index)
             pub_clock(page, str(target_tick))
             # submit
             page.locator(".submit-add").click()
@@ -66,7 +67,7 @@ def cookie_create():
         page = context.new_page()
         page.goto("https://member.bilibili.com/platform/home/")
         time.sleep(5)
-        while page.locator('.login_wp').count():
+        while page.locator(".login_wp").count():
             logger.warning("Please Login~")
             time.sleep(3)
         # page.locator('#douyin-header-menuCt').get_by_role("link").nth(-1).hover()
@@ -82,6 +83,7 @@ def cookie_create():
             logger.warning("Login fail. Use anonymous mode.")
         browser.close()
 
+
 def cookie_check():
     logger.debug("Cookie Check launch")
     if not cookie_path.exists():
@@ -93,7 +95,7 @@ def cookie_check():
         # page.set_viewport_size({"width": 1280, "height": 720})
         page.goto("https://member.bilibili.com/platform/home")
         time.sleep(3)
-        if page.locator('.login_wp').count():
+        if page.locator(".login_wp").count():
             logger.debug("login fail")
             if cookie_path.exists():
                 logger.warning(f"cookie out of time delete. {cookie_path}")
@@ -112,17 +114,19 @@ def cookie_check():
             time.sleep(1)
             return Nox(0)
 
+
 def upload_file(page, mode, file_path):
     logger.debug("Upload launch")
     if mode == 0:
         page.locator(".bcc-upload-wrapper").locator("input").set_input_files(file_path)
-        #finish
+        # finish
         while "上传完成" not in page.locator(".drag-list").inner_text():
             time.sleep(2)
         time.sleep(5)
     elif mode == 1:
         pass
         time.sleep(3)
+
 
 def magic_text(page, title, article, keyword_list):
     logger.debug("Magic text launch")
@@ -147,11 +151,12 @@ def magic_text(page, title, article, keyword_list):
     #     page.keyboard.press("Tab")
     # time.sleep(0.5)
 
+
 def pub_clock(page, pub_dt):
     logger.debug("Pub clock launch")
     pub_dt = pendulum.parse(pub_dt)
     now = pendulum.now("Asia/Shanghai")
-    
+
     page.locator(".time-switch-wrp").locator(".switch-container").click()
     time.sleep(0.5)
     # page.locator(".date-picker-date").locator("p").evaluate(f"element => element.textContent = '{pub_tuple[0]}'")
@@ -164,26 +169,30 @@ def pub_clock(page, pub_dt):
     if pub_dt.month != now.month:
         page.locator(".date-picker-nav-wrp").locator(".next-btn-month").click()
         time.sleep(0.5)
-    page.locator(".date-picker-body-wrp").get_by_text(str(pub_dt.day), exact=True).click()
+    page.locator(".date-picker-body-wrp").get_by_text(
+        str(pub_dt.day), exact=True
+    ).click()
     time.sleep(0.5)
     page.locator(".date-picker-timer").click()
     time.sleep(0.5)
-    page.locator(".time-picker-panel-select-wrp").nth(0).get_by_text(f"{pub_dt.hour:02}", exact=True).click()
+    page.locator(".time-picker-panel-select-wrp").nth(0).get_by_text(
+        f"{pub_dt.hour:02}", exact=True
+    ).click()
     time.sleep(0.5)
-    page.locator(".time-picker-panel-select-wrp").nth(1).get_by_text(f"{pub_dt.minute:02}", exact=True).click()
+    page.locator(".time-picker-panel-select-wrp").nth(1).get_by_text(
+        f"{pub_dt.minute:02}", exact=True
+    ).click()
     time.sleep(0.5)
     page.locator(".date-picker-timer").click()
     time.sleep(0.5)
-
 
 
 def boot():
     global Pooh
-    with open("config.toml", "r", encoding="utf-8") as f:
-        config = tomlkit.parse(f.read())
+    with open("config.toml", "rb") as f:
+        config = tomllib.load(f)
     Pooh = config
     kimiDB.boot(Pooh.get("MOONSHOT_API_KEY", None))
-
 
 
 if __name__ == "__main__":

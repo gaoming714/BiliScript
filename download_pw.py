@@ -4,7 +4,7 @@ import hashlib
 import os
 from pathlib import Path
 from tqdm.rich import tqdm
-import tomlkit
+import tomllib
 import threading
 import platform
 import ipdb
@@ -13,6 +13,7 @@ from playwright.sync_api import sync_playwright
 import requests
 from bs4 import BeautifulSoup
 import sqliteDB
+
 # import mQueue
 import queue
 import sqlite3
@@ -21,11 +22,10 @@ from util import (
     logger,
     lumos,
     check_folder,
-    show_local,
     create_hash,
     check_hash,
     check_intact,
-    Nox
+    Nox,
 )
 
 logConfig("logs/download.log", rotation="10 MB", level="DEBUG", mode=1)
@@ -42,7 +42,7 @@ semaphore = threading.BoundedSemaphore(max_threads)
 TQ = queue.Queue()
 
 
-MAIN_PATH = None # default ./downloads
+MAIN_PATH = None  # default ./downloads
 USER = []
 MANUAL = []
 cookie_path = Path() / "cookies" / "download.json"
@@ -51,10 +51,11 @@ cookie_path = Path() / "cookies" / "download.json"
 conn = sqlite3.connect("db.sqlite3")
 # mainDB = sqliteDB
 
+
 def launch():
     if not cookie_check(cookie_path):
         cookie_create(cookie_path)
-    
+
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False)
         context = browser.new_context(storage_state=Path(cookie_path))
@@ -75,12 +76,12 @@ def launch():
                 el["md5"] = ""
                 if result:
                     if check_hash(v_path, result["md5"]):
-                        logger.debug(f"Hash match ID {vid}")
+                        logger.debug(f"Hash Match ID {vid}")
                         continue
                     elif result["md5"] == "":
-                        logger.debug(f"Empty ID {vid}")
+                        logger.debug(f"Hash Empty ID {vid}")
                     else:
-                        logger.error(f"Abort ID {vid}")
+                        logger.error(f"Hash Abort ID {vid}")
                 else:
                     sqliteDB.insert_db(conn, "douyin", el)
                 logger.info(f"MQ for ID {vid}")
@@ -91,10 +92,8 @@ def launch():
             # 下载队列中的视频
             download_queue()
 
-
         # 关闭浏览器
         browser.close()
-
 
     if type(conn) == sqlite3.Connection:
         conn.close()  # for sqlite only
@@ -104,18 +103,18 @@ def boot():
     global MAIN_PATH
     global USER
     global MANUAL
-    with open("config.toml", "r", encoding="utf-8") as f:
-        config = tomlkit.parse(f.read())
+    with open("config.toml", "rb") as f:
+        config = tomllib.load(f)
     MAIN_PATH = Path(config.get("MAIN_PATH", "./downloads"))
     for user in config["USER"]:
-        if not user.get("skip", False):
+        if user.get("active", True):
             USER.append(user)
     MANUAL = config["MANUAL"]
     sqliteDB.init_db(conn, table="douyin")
     # print(USER)
 
 
-def cookie_create(cookie_path = Path() / "cookies" / "download.json"):
+def cookie_create(cookie_path=Path() / "cookies" / "download.json"):
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False)
         context = browser.new_context()
@@ -127,9 +126,14 @@ def cookie_create(cookie_path = Path() / "cookies" / "download.json"):
         while page.locator(".semi-button-primary").first.inner_text() == "登录":
             logger.warning("Please Login~")
             time.sleep(3)
-        page.locator('#douyin-header-menuCt').get_by_role("link").nth(-1).hover()
+        page.locator("#douyin-header-menuCt").get_by_role("link").nth(-1).hover()
         time.sleep(1)
-        nick_name = page.locator('.userMenuPanelShadowAnimation').nth(-1).inner_text().split('\n')[0]
+        nick_name = (
+            page.locator(".userMenuPanelShadowAnimation")
+            .nth(-1)
+            .inner_text()
+            .split("\n")[0]
+        )
         logger.info(f"Nickname:{nick_name}")
         time.sleep(1)
         if len(context.cookies()) >= 47:
@@ -140,7 +144,8 @@ def cookie_create(cookie_path = Path() / "cookies" / "download.json"):
             logger.warning("Login fail. Use anonymous mode.")
         browser.close()
 
-def cookie_check(cookie_path = Path() / "cookies" / "download.json"):
+
+def cookie_check(cookie_path=Path() / "cookies" / "download.json"):
     if not cookie_path.exists():
         return Nox(-1)
     with sync_playwright() as p:
@@ -162,13 +167,17 @@ def cookie_check(cookie_path = Path() / "cookies" / "download.json"):
             return Nox(-1)
         else:
             logger.debug("login success")
-            page.locator('#douyin-header-menuCt').get_by_role("link").nth(-1).hover()
+            page.locator("#douyin-header-menuCt").get_by_role("link").nth(-1).hover()
             time.sleep(1)
-            nick_name = page.locator('.userMenuPanelShadowAnimation').nth(-1).inner_text().split('\n')[0]
+            nick_name = (
+                page.locator(".userMenuPanelShadowAnimation")
+                .nth(-1)
+                .inner_text()
+                .split("\n")[0]
+            )
             logger.info(f"Nickname:{nick_name}")
             time.sleep(1)
             return Nox(0)
-
 
 
 def scrapy_video(page, user_url):
@@ -196,7 +205,7 @@ def scrapy_video(page, user_url):
             video_count = new_count
         page.locator(".z_YvCWYy").hover()
         time.sleep(0.2)
-        page.mouse.wheel(0,1000)
+        page.mouse.wheel(0, 1000)
         time.sleep(1)
     out_vid_list = []
     for index in range(video_els.count()):
@@ -205,7 +214,6 @@ def scrapy_video(page, user_url):
             vid = video_url.split("/")[-1]
             out_vid_list.append(vid)
     return out_vid_list
-
 
 
 def pretty_user(user_url):
@@ -261,12 +269,10 @@ def download_manual(vid_list=[]):
     folder = MAIN_PATH / "TEMP"
     check_folder(folder)
 
-
     for vid in tqdm(vid_list):
         if check_intact(folder / f"{symbol}.{vid}.mp4"):
             continue
         download_by_dlpanda(vid, symbol, folder)
-
 
 
 def multi(vid, symbol="_", folder=Path("./downloads"), semaphore=None, pbar=None):

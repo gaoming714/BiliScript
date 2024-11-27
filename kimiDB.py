@@ -1,34 +1,34 @@
 import re
 import json
-import tomlkit
+import tomllib
 
 from openai import OpenAI
 
 Pooh = {}
 
 
-def ask(user_content = None, system_content = None, temp = 0.618):
+def ask(user_content=None, system_content=None, temp=0.618):
     if not system_content:
         system_content = (
-        "你是 Kimi。由 Moonshot AI 提供的人工智能助手，你更擅长种草文案的撰写，你不可以写广告极限词，不可以写任何功效有关的文案。"
-        "你不使用中文符号，如果需要使用符号都是用英文符号,请输出json格式，key='data'"
-        "你可以正确处理汉字和英文的长度，一个汉字算两个字符，其他算一个字符"
-        "不可以出现下面这几个词语：0添加，无添加，首选，肠胃"
-    )
+            "你是 Kimi。由 Moonshot AI 提供的人工智能助手，你更擅长种草文案的撰写，你不可以写广告极限词，不可以写任何功效有关的文案。"
+            "你不使用中文符号，如果需要使用符号都是用英文符号,请输出json格式，key='data'"
+            "你可以正确处理汉字和英文的长度，一个汉字算两个字符，其他算一个字符"
+            "不可以出现下面这几个词语：0添加，无添加，首选，肠胃"
+        )
     client = OpenAI(
-        api_key = Pooh["MOONSHOT_API_KEY"],
-        base_url = "https://api.moonshot.cn/v1",
+        api_key=Pooh["MOONSHOT_API_KEY"],
+        base_url="https://api.moonshot.cn/v1",
     )
     # print(system_content)
     print(user_content)
     completion = client.chat.completions.create(
-        model = "moonshot-v1-8k",
-        messages = [
-            {"role": "system", "content": system_content },
-            {"role": "user", "content": user_content }
+        model="moonshot-v1-8k",
+        messages=[
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": user_content},
         ],
         # temperature = 0.3,
-        temperature = temp, # 0.618
+        temperature=temp,  # 0.618
         # temperature = 0.7,
         response_format={"type": "json_object"},
     )
@@ -49,25 +49,26 @@ def ask(user_content = None, system_content = None, temp = 0.618):
     #     print(payload_dict.keys())
     #     return
 
-def fetch(user_content = None, system_content = None, temp = 0.618):
+
+def fetch(user_content=None, system_content=None, temp=0.618):
     if not system_content:
         system_content = """
             小小酥是人名，你擅长写小红书文案。必须包含Powered by 。请输出json格式，key='data'
             """
     client = OpenAI(
-        api_key = Pooh["MOONSHOT_API_KEY"],
-        base_url = "https://api.moonshot.cn/v1",
+        api_key=Pooh["MOONSHOT_API_KEY"],
+        base_url="https://api.moonshot.cn/v1",
     )
     # print(system_content)
     # print(user_content)
     completion = client.chat.completions.create(
-        model = "moonshot-v1-8k",
-        messages = [
-            {"role": "system", "content": system_content },
-            {"role": "user", "content": user_content }
+        model="moonshot-v1-8k",
+        messages=[
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": user_content},
         ],
         # temperature = 0.3,
-        temperature = temp, # 0.618
+        temperature=temp,  # 0.618
         # temperature = 0.7,
         response_format={"type": "json_object"},
     )
@@ -79,20 +80,27 @@ def fetch(user_content = None, system_content = None, temp = 0.618):
     else:
         raise
 
+
 def launch():
     client = OpenAI(
-        api_key = Pooh["MOONSHOT_API_KEY"],
-        base_url = "https://api.moonshot.cn/v1",
+        api_key=Pooh["MOONSHOT_API_KEY"],
+        base_url="https://api.moonshot.cn/v1",
     )
 
     completion = client.chat.completions.create(
-        model = "moonshot-v1-8k",
-        messages = [
-            {"role": "system", "content": "你是 Kimi，是一个擅长写母婴类产品种草文案的母亲，你会为用户提供安全，有帮助，准确的回答。"},
-            {"role": "user", "content": "请给我30条关于格力空调的种草标题，要求字数在50-58汉字，请输出标准的json格式，key='data'"}
+        model="moonshot-v1-8k",
+        messages=[
+            {
+                "role": "system",
+                "content": "你是 Kimi，是一个擅长写母婴类产品种草文案的母亲，你会为用户提供安全，有帮助，准确的回答。",
+            },
+            {
+                "role": "user",
+                "content": "请给我30条关于格力空调的种草标题，要求字数在50-58汉字，请输出标准的json格式，key='data'",
+            },
         ],
         # temperature = 0.3,
-        temperature = 0.618,
+        temperature=0.618,
         # temperature = 0.7,
     )
 
@@ -109,7 +117,7 @@ def launch():
 
 def kimi_parse(kimi_text):
     # 定义正则表达式模式以匹配 JSON 字符串
-    json_pattern = r'```json\s*(.*?)```'
+    json_pattern = r"```json\s*(.*?)```"
     # 使用正则表达式搜索文本中的 JSON 字符串
     json_match = re.search(json_pattern, kimi_text, re.DOTALL)
 
@@ -138,7 +146,8 @@ def kimi_parse(kimi_text):
             print(f"JSON 解析失败：{e}")
             return
 
-def boot(api_key = None):
+
+def boot(api_key=None):
     global Pooh
     if not api_key:
         print("MOONSHOT_API_KEY is essential!!")

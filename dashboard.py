@@ -1,477 +1,312 @@
-# -*- coding:utf-8 -*-
-"""
-
-"""
-
-import urllib.request
-import os
-import json
 import time
-import hashlib
-import random
+import re
+from pathlib import Path
 import pendulum
-from tqdm import tqdm
-from alive_progress import alive_bar, alive_it
-from loguru import logger
-
-# package : poetry run pyinstaller dashboard.py --onefile --collect-all grapheme
-# action : grapheme for alive_progress
-
+import random
+from tqdm.rich import tqdm
+from playwright.sync_api import sync_playwright
 import pandas as pd
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ExpC
-
+import polars as pl
+import ipdb
+from tenacity import retry, stop_after_attempt
 import requests
 
-USER_ID = ""
-EXT_list = []
+import tomllib
+import kimiDB
 
-FILE_list = None
+from util import logConfig, logger, lumos, Nox
 
-df = None
+logConfig("logs/default.log", rotation="10 MB", level="DEBUG", mode=1)
 
+Pooh = {}
 
-# This example requires Selenium WebDriver 3.13 or newe
-options = Options()
-options.add_argument("-headless")  # headless
-driver = webdriver.Firefox(executable_path="geckodriver", options=options)
-wait = WebDriverWait(driver, 10)
-
-
-def load():
-    global USER_ID
-    global EXT_list
-    data = None
-    with open("dashboard.json", 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        USER_ID = data["user_id"]
-        EXT_list = data["ext_list"]
-
-
-def login():
-    driver.get("https://passport.bilibili.com/login")
-
-    print(driver.title)
-    print("Please login \n")
-
-    wait = WebDriverWait(driver, 120)
-    first_result = wait.until(
-        ExpC.presence_of_element_located((By.CLASS_NAME, "header-entry-mini"))
-    )
-
-    print("done")
+cookie_path = Path() / "cookies" / "bilibili.json"
 
 
 def launch():
-    ticktock = pendulum.now("Asia/Shanghai")
-    # print(ticktock)
-    print("📌   ", ticktock.to_datetime_string())
-    # user_id = "30978137"
-    # video_list = fetch_user(user_id, limit = 30)
-    video_list = fetch_user_api(USER_ID)
-    ext_videos(video_list)  # add some special BV _ id
-    # print(video_list)
-    box = []
-
-    for bv_id in alive_it(video_list):
-        # online, play, like, coin, star, release_time, title = get_data(bv_id)
-        # box.append([bv_id, online, play, like, coin, star, release_time, title])
-        # bv_dict = get_data(bv_id)
-        bv_dict = get_api(bv_id)
-        if bv_dict == {} or bv_dict == None:
-            print([bv_id, " => skip"])
-            continue
-        bv_dict["bv_id"] = bv_id
-        box.append(bv_dict)
-        time.sleep(1)  # for cid api should not be too fast
-        # bar()
-    cmd_print(box)
-    # box is  [ { } , { } ]
-    monitor(box)
+    bvid_list = fetch_homepage(mid=30978137)
+    logger.success("online video list")
+    logger.success(bvid_list)
+    panel = []
+    for bvid in bvid_list:
+        res = fetch_video(bvid=bvid)
+        if res:
+            panel.append(res.payload)
+    # polars
+    pl.Config.set_tbl_cols(50)  # 设置显示的最大列数
+    pl.Config.set_tbl_rows(200)  # 设置显示的最大行数
+    df = pl.DataFrame(panel)
+    df = df.with_columns(pl.col("pubdate").dt.convert_time_zone("Asia/Shanghai"))
+    df = df.with_columns(pl.col("title").str.slice(0, 10).alias("title"))
 
 
-def fetch_user(user_id, limit=None):
-    # return all videos(bv_id) in this user
-    user_url = "https://space.bilibili.com/" + user_id + "/video"
-    driver.get(user_url)
+    columns = [col for col in df.columns if col != "title"] + ["title"]
+    df = df.select(columns)
 
-    # print("fetch_user")
-    # print(driver.title)
+    # pandas
+    # df = pd.DataFrame(panel)
+    # df["pubdate"] = df["pubdate"].dt.tz_convert("Asia/Shanghai")
+    # df["title"] = df["title"].str[:10]
+    # columns = [col for col in df.columns if col != "title"] + ["title"]
+    # df = df[columns]
+    print(df)
+    raise
 
-    time.sleep(5)
-
-    video_els = driver.find_elements(By.CLASS_NAME, "small-item")
-    video_id_list = []
-    for video_el in video_els:
-        video_id = video_el.get_attribute("data-aid")
-        video_id_list.append(video_id)
-    if limit != None:
-        video_id_list = video_id_list[:limit]
-    return video_id_list
+    # df = df.with_columns(pl.col("pubdate").str.strptime(pl.Datetime, "%Y-%m-%d %H:%M:%S"))
+    # df = pd.DataFrame.from_dict(panel, orient="index").reset_index()
+    # df.rename(columns={"index": "BVID"}, inplace=True)
+    ipdb.set_trace()
 
 
-def fetch_user_api(user_id, limit=30):
-    user_url = "https://api.bilibili.com/x/space/arc/search"
-    payload = {"mid": user_id, "pn": 1, "ps": 30}
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0"
-    }
-    r = requests.get(user_url, params=payload, headers=headers)
-    if r.status_code != 200:
-        print("user skip")
-        return
-    res = r.json()
-    if not check_res(res):
-        print("user skip")
-        return
-    vlist = res["data"]["list"]["vlist"]
-    video_id_list = []
-    for video_item in vlist:
-        video_id_list.append(video_item["bvid"])
-    return video_id_list
+    raise
+    {"BVIC":{"title":"abc", "desc":"desca","stat":{"view":123,"like":10}}}
+    # https://space.bilibili.com/30978137?spm_id_from=333.1007.0.0
+    # url = "https://api.bilibili.com/x/space/wbi/acc/info"
+    # params = {
+    #     "mid": 2,
+    #     "wts": 30978137,
+    #     "w_rid": "f7b376124782ae8cb42c56fdd69144ed"
+    # }
+    # response = requests.get(url, params=params)
 
 
-def ext_videos(video_list):
-    for id_item in EXT_list:
-        if id_item not in video_list:
-            video_list.append(id_item)
+    if not cookie_check():
+        cookie_create()
+
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=False)
+        context = browser.new_context(storage_state=Path(cookie_path))
+        page = context.new_page()
+        dist_folder = Path("dist")
+        mp4_list = list(dist_folder.glob("*.mp4"))
+        pbar = tqdm(total=len(mp4_list))
+        for index, item in enumerate(mp4_list):
+            logger.info(f"{item} - Waiting kimiDB")
+            title = kimiDB.fetch(
+                "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题"
+            )["data"]
+            key_list = kimiDB.fetch(
+                "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词"
+            )["data"]
+            page.goto(
+                "https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload"
+            )
+            time.sleep(2)
+            # upload file
+            upload_file(page, 0, item)
+            # magic_text
+            magic_text(page, title, "article", key_list)
+            # pub clock
+            tick = pendulum.parse("2024-11-21 15:00:00")
+            target_tick = tick.add(hours=1 * index)
+            pub_clock(page, str(target_tick))
+            # submit
+            page.locator(".submit-add").click()
+            logger.success(f"{item}")
+            pbar.update(1)
+        pbar.close()
 
 
-def get_data(bv_id):
-    video_url = "https://www.bilibili.com/video/" + bv_id
-    driver.get(video_url)
-    ticktock = pendulum.now("Asia/Shanghai")
-    time.sleep(5)
-    first_result = wait.until(
-        ExpC.presence_of_element_located((By.CLASS_NAME, "bpx-player-sending-bar"))
-    )
-    time.sleep(1)
-    try:
-        online_el = driver.find_element(
-            By.XPATH,
-            "/html/body/div[2]/div[4]/div[1]/div[2]/div[2]/div/div/div[1]/div[2]/div/div[1]/div[1]/b",
-        )
-        online_str = online_el.text
-        play_el = driver.find_element(
-            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[1]"
-        )
-        play_str = play_el.text
-        like_el = driver.find_element(
-            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[1]/span"
-        )
-        like_str = like_el.text
-        coin_el = driver.find_element(
-            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[2]/span"
-        )
-        coin_str = coin_el.text
-        star_el = driver.find_element(
-            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[3]/div[1]/span[3]/span"
-        )
-        star_str = star_el.text
-        rtime_el = driver.find_element(
-            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/div/div/span[3]/span/span"
-        )
-        rtime_str = rtime_el.text
-        title_el = driver.find_element(
-            By.XPATH, "/html/body/div[2]/div[4]/div[1]/div[1]/h1"
-        )
-        title_str = title_el.text
-        title_str = title_str[:30]
-    except:
-        return {}
-    if "-" == online_str:
-        print("selenium warning 1")
-        return {}
-    if "" in [online_str, play_str, like_str, coin_str, star_str]:
-        print("selenium warning 2")
-        return {}
-    # time.sleep(1)
-    online = pretty_num(online_str)
-    play = pretty_num(play_str)
-    like = pretty_num(like_str)
-    coin = pretty_num(coin_str)
-    star = pretty_num(star_str)
-
-    stay, rate = stay_rate(play, like, coin, star)
-    rtime = pendulum.parse(rtime_str, tz="Asia/Shanghai")
-
-    output_dict = {
-        "online": online - 1,
-        "play": play,
-        "like": like,
-        "coin": coin,
-        "star": star,
-        "stay": stay,
-        "rate": rate,
-        "duration": duration_num,
-        "rtime": rtime.to_datetime_string(),  # to datetime str
-        "mtime": ticktock.to_datetime_string(),  # to datetime str
-        "title": title_str,
-    }
-    return output_dict
-
-
-def get_api(bv_id):
-    ticktock = pendulum.now("Asia/Shanghai")
-
-    # # get cid
-    # cid_url = "https://api.bilibili.com/x/player/pagelist"
-    # payload = {"bvid": bv_id}
-    # r = requests.get(cid_url,params=payload)
-    # if r.status_code != 200:
-    #     print("cid skip")
-    #     return
-    # res = r.json()
-    # if res == None:
-    #     print("cid skip")
-    #     return
-    # cid = res["data"][0]["cid"]
-
-    view_url = "http://api.bilibili.com/x/web-interface/view"
-    payload = {"bvid": bv_id}
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0"
-    }
-    r = requests.get(view_url, params=payload, headers=headers)
-    if r.status_code != 200:
-        print("view skip")
-        return
-    res = r.json()
-    if not check_res(res):
-        print("view skip")
-        return
-    cid = res["data"]["cid"]  # maybe not stable
-    title_str = res["data"]["title"][:30]
-    rtime_num = res["data"]["pubdate"]
-    rtime = pendulum.from_timestamp(rtime_num, tz="Asia/Shanghai")
-    duration_num = res["data"]["duration"]
-    play = res["data"]["stat"]["view"]
-    like = res["data"]["stat"]["like"]
-    coin = res["data"]["stat"]["coin"]
-    star = res["data"]["stat"]["favorite"]
-    his_rank = res["data"]["stat"]["his_rank"]
-    now_rank = res["data"]["stat"]["now_rank"]
-    evaluation_str = res["data"]["stat"]["evaluation"]
-    # print(online)
-    # print(his_rank)
-    # print(now_rank)
-    # print(evaluation_str)
-    stay, rate = stay_rate(play, like, coin, star)
-
-    # online data
-    online_url = "http://api.bilibili.com/x/player/online/total"
-    payload = {"bvid": bv_id, "cid": cid}
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0"
-    }
-    r = requests.get(online_url, params=payload, headers=headers)
-    if r.status_code != 200:
-        print("online skip")
-        return
-    res = r.json()
-    if not check_res(res):
-        print("online skip")
-        return
-    online_str = res["data"]["total"]
-    online = pretty_num(online_str)
-
-    output_dict = {
-        "online": online - 1,
-        "play": play,
-        "like": like,
-        "coin": coin,
-        "star": star,
-        "stay": stay,
-        "rate": rate,
-        "rtime": rtime.to_datetime_string(),  # to datetime str
-        "mtime": ticktock.to_datetime_string(),  # to datetime str
-        "title": title_str,
-    }
-    return output_dict
-
-
-def stay_rate(play_num, like_num, coin_num, star_num):
-    if play_num == 0:
-        return 0, 0
-
-    stay_num = like_num + star_num + coin_num * 5
-    rate_num = stay_num / play_num
-
-    return stay_num, rate_num
-
-
-def pretty_num(origin_str):
-    if origin_str in [" ", "  ", "-", "点赞", "投币", "收藏"]:
-        output_num = 0
-    elif not origin_str.isdigit():
-        tmp_str = origin_str[:-1]
-        output_num = int(float(tmp_str) * 10000)
-    else:
-        output_num = int(origin_str)
-    return output_num
-
-
-def check_res(json_dict):
-    if type(json_dict) != type({}):
-        print(json_dict)
-        # raise
-        return
-    if "code" not in json_dict or "data" not in json_dict:
-        print(json_dict)
-        # raise
-        return
-    if json_dict["code"] != 0:
-        print(json_dict)
-        # raise
-        return
-    return True
-
-
-def cmd_print(box_list):
-    pretty = "Current Dashboard Data \n"
-    pretty += " flag\tplay\tstray\trtime\t\t     bv_id\n"
-    offline = []
-    for item in box_list:
-        # bv_id, online, play, like, coin, star, release_time, title  = item
-        bv_id = item["bv_id"]
-        online = item["online"]
-        play = item["play"]
-        like = item["like"]
-        coin = item["coin"]
-        star = item["star"]
-        stay = item["stay"]
-        rate = item["rate"]
-        rtime = item["rtime"]
-        mtime = item["mtime"]
-        title = item["title"]
-
-        time_diff = (pendulum.parse(mtime) - pendulum.parse(rtime)).in_hours()
-
-        if online > 999:
-            online_str = "^" + str(online)
-        elif online > 99:
-            online_str = "$ " + str(online)
-        elif online > 50:
-            online_str = "@  " + str(online)
-        elif online > 24:
-            online_str = "&  " + str(online)
-        elif online > 9:
-            online_str = "+  " + str(online)
-        elif online > 0:
-            online_str = "    " + str(online)
-        elif online == 0:
-            online_str = "    "
-            # total_online += online_num
-            if time_diff > 24:
-                offline.append([bv_id, play])
-                continue
+def cookie_create():
+    logger.debug("Cookie Create launch")
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=False)
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto("https://member.bilibili.com/platform/home/")
+        time.sleep(5)
+        while page.locator(".login_wp").count():
+            logger.warning("Please Login~")
+            time.sleep(3)
+        # page.locator('#douyin-header-menuCt').get_by_role("link").nth(-1).hover()
+        # time.sleep(1)
+        # nick_name = page.locator('.userMenuPanelShadowAnimation').nth(-1).inner_text().split('\n')[0]
+        # logger.info(f"Nickname:{nick_name}")
+        time.sleep(3)
+        if len(context.cookies()) >= 47:
+            storage = context.storage_state(path=cookie_path)
+            logger.success("Login success. Save to state.json.")
         else:
-            print("warning => ", online_str)
-            online_str = "ERROR"
-
-        # rate = "{:.2f} %".format(rate_num * 100)
-        # pretty = pretty + flag + online + "\t" + play + "\t" + stay + "\t" + 
-        # rate + "\t" + release_time + "  " + bv_id + " " + title + "\n"
-        pretty = (
-            pretty
-            + " "
-            + online_str
-            + "\t"
-            + str(play)
-            + "\t"
-            + str(stay)
-            + "\t"
-            + rtime
-            + "  "
-            + bv_id
-            + "  "
-            + title
-            + "\n"
-        )
-    # print offline
-    # logger.debug(offline)
-    # print online
-    logger.debug(pretty)
+            storage = context.storage_state(path=cookie_path)
+            logger.warning("Login fail. Use anonymous mode.")
+        browser.close()
 
 
-def monitor(box_list):
-    global df
-    if box_list == []:
+def cookie_check():
+    logger.debug("Cookie Check launch")
+    if not cookie_path.exists():
+        return Nox(-1)
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=False)
+        context = browser.new_context(storage_state=Path(cookie_path))
+        page = context.new_page()
+        # page.set_viewport_size({"width": 1280, "height": 720})
+        page.goto("https://member.bilibili.com/platform/home")
+        time.sleep(3)
+        if page.locator(".login_wp").count():
+            logger.debug("login fail")
+            if cookie_path.exists():
+                logger.warning(f"cookie out of time delete. {cookie_path}")
+                magic = f"rm {cookie_path}"
+                if len(magic) < 5:
+                    logger.error("rm action")
+                    raise
+                lumos(magic)
+            return Nox(-1)
+        else:
+            logger.debug("login success")
+            # page.locator('#douyin-header-menuCt').get_by_role("link").nth(-1).hover()
+            # time.sleep(1)
+            # nick_name = page.locator('.userMenuPanelShadowAnimation').nth(-1).inner_text().split('\n')[0]
+            # logger.info(f"Nickname:{nick_name}")
+            time.sleep(1)
+            return Nox(0)
+
+
+def fetch_homepage(mid=None):
+    logger.debug("Fetch home")
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto(f"https://space.bilibili.com/{mid}/video")
+        time.sleep(2)
+
+        elem = page.locator("li.small-item a.title")
+        vid_list = []
+        for index in range(elem.count()):
+            href = elem.nth(index).get_attribute("href")
+            vid = href.split("/")[-2]
+            vid_list.append(vid)
+        return vid_list
+
+def fetch_video(bvid=None):
+    """
+    return data:
+        title
+        pubdate - dt = pendulum.from_timestamp(timestamp)
+        duration
+        stat.view
+        stat.reply
+        stat.like
+        stat.favorite
+        stat.coin
+        stat.share
+    """
+    url = "https://api.bilibili.com/x/web-interface/view"
+    params = {
+        "bvid": bvid  # 替换为你要查询的 BV 号
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+    }
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        # 检查响应状态码
+        if response.status_code == 200:
+            # 获取 JSON 数据
+            data = response.json()["data"]
+        else:
+            logger.debug(f"请求失败，状态码: {response.status_code}")
+    except requests.RequestException as e:
+        logger.debug(f"请求出错: {e}")
         return
-    if type(df) == type(None):
-        df = pd.DataFrame(box_list)
-        df = df[["bv_id", "title", "rtime", "mtime", "online", "play", "like", "stay"]]
-        df["rtime"] = pd.to_datetime(df["rtime"])
-        df["mtime"] = pd.to_datetime(df["mtime"])
-
-    else:
-        box_df = pd.DataFrame(box_list)
-        box_df = box_df[
-            ["bv_id", "title", "rtime", "mtime", "online", "play", "like", "stay"]
-        ]
-        box_df["rtime"] = pd.to_datetime(box_df["rtime"])
-        box_df["mtime"] = pd.to_datetime(box_df["mtime"])
-        df = pd.concat([df, box_df], ignore_index=True)
-
-    a_se = (
-        df.set_index(df["mtime"])
-        .groupby(["bv_id", "rtime"])
-        .resample("H")["online"]
-        .mean()
-        .round(2)
-    )
-    b_se = (
-        df.set_index(df["mtime"])
-        .groupby(["bv_id", "rtime"])
-        .resample("H")["play"]
-        .last()
-    )
-    c_se = (
-        df.set_index(df["mtime"])
-        .groupby(["bv_id", "rtime"])
-        .resample("H")["stay"]
-        .last()
-    )
-    m_df = pd.concat([a_se, b_se, c_se], axis=1)
-    # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
-    m_df = m_df[(m_df["online"] >= 5)]
-    n_df = m_df.sort_values(by=["rtime", "mtime"], ascending=False)
-    if len(n_df.index) > 0:
-        print(n_df)
-
-    # a_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["online"].last().round(2)
-    # b_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["play"].last()
-    # c_se = df.set_index(df["mtime"]).groupby(['bv_id',"rtime"])["stay"].last()
-    # m_df = pd.concat([a_se,b_se,c_se], axis=1)
-    # # m_df = l_df[(l_df["online"] >= 5) | (l_df["play"] >= 10000)]
-    # m_df = m_df[(m_df["play"] >= 10000)]
-    # n_df = m_df.sort_values(by=['rtime'], ascending=False)
-    # print(n_df)
+    res_dict = {}
+    res_dict["bvid"] = data["bvid"]
+    res_dict["title"] = data["title"]
+    res_dict["pubdate"] = pendulum.from_timestamp(data["pubdate"], tz="Asia/Shanghai")
+    res_dict["duration"] = data["duration"]
+    res_dict["view"] = data["stat"]["view"]
+    res_dict["reply"] = data["stat"]["reply"]
+    res_dict["like"] = data["stat"]["like"]
+    res_dict["favorite"] = data["stat"]["favorite"]
+    res_dict["coin"] = data["stat"]["coin"]
+    res_dict["share"] = data["stat"]["share"]
+    return Nox(0, res_dict)
 
 
-def lumos(cmd):
-    # print(cmd)
-    # res = 0
-    pre = "\n🧪   "
-    logger.debug(pre + cmd)
-    res = os.system(cmd)
-    return res
+def upload_file(page, mode, file_path):
+    logger.debug("Upload launch")
+    if mode == 0:
+        page.locator(".bcc-upload-wrapper").locator("input").set_input_files(file_path)
+        # finish
+        while "上传完成" not in page.locator(".drag-list").inner_text():
+            time.sleep(2)
+        time.sleep(5)
+    elif mode == 1:
+        pass
+        time.sleep(3)
+
+
+def magic_text(page, title, article, keyword_list):
+    logger.debug("Magic text launch")
+    page.locator(".video-title").locator(".input-val").fill(title)
+    # if page.locator(".titleInput").locator(".c-input_max").count():
+    #     page.locator(".titleInput").locator("input").press("Backspace")
+    # page.locator("#post-textarea").fill(article)
+
+    # label
+    for item in keyword_list:
+        page.locator(".tag-container").locator("input").type(item)
+        time.sleep(0.5)
+        page.keyboard.press("Enter")
+        time.sleep(0.5)
+    time.sleep(0.5)
+
+    # keyword
+    # for item in keyword_list:
+    #     page.locator("#post-textarea").type("#")
+    #     page.locator("#post-textarea").type(item)
+    #     time.sleep(0.5)
+    #     page.keyboard.press("Tab")
+    # time.sleep(0.5)
+
+
+def pub_clock(page, pub_dt):
+    logger.debug("Pub clock launch")
+    pub_dt = pendulum.parse(pub_dt)
+    now = pendulum.now("Asia/Shanghai")
+
+    page.locator(".time-switch-wrp").locator(".switch-container").click()
+    time.sleep(0.5)
+    # page.locator(".date-picker-date").locator("p").evaluate(f"element => element.textContent = '{pub_tuple[0]}'")
+    # time.sleep(0.5)
+    # page.locator(".date-picker-timer").locator("p").evaluate(f"element => element.textContent = '{pub_tuple[1]}'")
+    # time.sleep(0.5)
+    time.sleep(0.5)
+    page.locator(".date-picker-date").click()
+    time.sleep(0.5)
+    if pub_dt.month != now.month:
+        page.locator(".date-picker-nav-wrp").locator(".next-btn-month").click()
+        time.sleep(0.5)
+    page.locator(".date-picker-body-wrp").get_by_text(
+        str(pub_dt.day), exact=True
+    ).click()
+    time.sleep(0.5)
+    page.locator(".date-picker-timer").click()
+    time.sleep(0.5)
+    page.locator(".time-picker-panel-select-wrp").nth(0).get_by_text(
+        f"{pub_dt.hour:02}", exact=True
+    ).click()
+    time.sleep(0.5)
+    page.locator(".time-picker-panel-select-wrp").nth(1).get_by_text(
+        f"{pub_dt.minute:02}", exact=True
+    ).click()
+    time.sleep(0.5)
+    page.locator(".date-picker-timer").click()
+    time.sleep(0.5)
+
+
+def boot():
+    global Pooh
+    with open("config.toml", "rb") as f:
+        config = tomllib.load(f)
+    Pooh = config
+    kimiDB.boot(Pooh.get("MOONSHOT_API_KEY", None))
 
 
 if __name__ == "__main__":
-    load()
-    # login()
-    # comment("BV1XS4y1s7HF")
-
-    # login()
-    while True:
-        launch()
-        time.sleep(60)
-    # for item in range(1000):
-    #     print("=====================================")
-    #     launch()
+    boot()
+    # logger.debug(Pooh)
+    # raise
+    launch()

@@ -4,14 +4,7 @@ import random
 from pathlib import Path
 import pendulum
 import shutil
-from util import (
-    logConfig,
-    logger,
-    lumos,
-    clean_cache,
-    ffmpeg,
-    Nox
-)
+from util import logConfig, logger, lumos, clean_cache, ffmpeg, Nox
 
 logConfig("logs/concat.log", rotation="10 MB", level="DEBUG", mode=1)
 
@@ -25,26 +18,29 @@ cache工作目录
 
 
 def launch():
-    clip_folder = Path('data/clips')
-    mp4_list = list(clip_folder.glob('**/*.mp4'))
+    clip_folder = Path("data/clips")
+    mp4_list = list(clip_folder.glob("**/*.mp4"))
     random.shuffle(mp4_list)
-    mp4_list = mp4_list[:8]
-    audio_path = Path() / "data" / "audio" / "drop.aac"
-    speed_video(mp4_list, audio_path)
+    mp4_list = mp4_list[:12]
+    audio_path = Path() / "data" / "audio" / "bgm.mp4"
+    print(audio_path)
+    concat_path = Path() / "cache" / "concat.mp4"
+    speed_video(mp4_list, audio_path, concat_path)
     add_bgm(audio_path)
     copy_to_dist()
+
 
 def get_bpm(audio_file):
     y, sr = librosa.load(audio_file)
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
     return tempo[0]
 
-def speed_video(mp4_list, baseline_path):
+
+def speed_video(mp4_list, baseline_path, output_path):
     baseline = get_bpm(baseline_path)
     bpm_list = [get_bpm(video) for video in mp4_list]
     # input_files = "-i a.mp4"
-    input_files = " ".join([f"-i {file}" for file in mp4_list]) # "-i mp4 -i mp4"
-    output_file = Path() / "cache" / "concat.mp4"
+    input_files = " ".join([f"-i {file}" for file in mp4_list])  # "-i mp4 -i mp4"
 
     speed_list = [baseline / bpm for bpm in bpm_list]
     speed_list = [max(0.5, min(speed, 100)) for speed in speed_list]
@@ -57,30 +53,50 @@ def speed_video(mp4_list, baseline_path):
         filter_parts.append(f"[{i}:a]atempo={speed_list[i]},volume=1[a{i}]")
         concat_parts.extend([f"[v{i}]", f"[a{i}]"])
 
-    filter_complex = "; ".join(filter_parts) + f"; {''.join(concat_parts)}concat=n={len(mp4_list)}:v=1:a=1[v][a]"
+    filter_complex = (
+        "; ".join(filter_parts)
+        + f"; {''.join(concat_parts)}concat=n={len(mp4_list)}:v=1:a=1[v][a]"
+    )
     magic = (
-        f'{ffmpeg} {input_files} '
+        f"{ffmpeg} {input_files} "
         f'-filter_complex "{filter_complex}" '
-        f'-map "[v]" -map "[a]" -c:v libx264 -c:a aac -r 60 {output_file}'
+        f'-map "[v]" -map "[a]" '
+        f"-c:v libx264 -c:a aac "
+        f"-r 60 "
+        f"{output_path}"
     )
     lumos(magic)
 
-def add_bgm(audio_path, volume = 1):
+
+def add_bgm(audio_path, volume=1):
     video_path = Path() / "cache" / "concat.mp4"
     output_file = Path() / "cache" / "final.mp4"
 
-    input_files = f'-i {video_path} -i {audio_path}' 
+    input_files = f"-i {video_path} -i {audio_path}"
+    # audio shortest
     magic = (
-        f'{ffmpeg} {input_files} '
-        f'-c:v copy -c:a aac -map 0:v:0 -map 1:a:0 '
-        f'-filter:a "volume={volume}" -shortest {output_file}'
+        f"{ffmpeg} {input_files} "
+        f"-map 0:v:0 -map 1:a:0 "
+        f"-c:v copy -c:a aac "
+        f'-filter:a "volume={volume}" '
+        f"-shortest "
+        f"{output_file}"
     )
+    # audio loop
+    # magic = (
+    #     f'{ffmpeg} {input_files} '
+    #     f'-filter_complex "[1:a]aloop=loop=-1:size=2e+09[aout]" '
+    #     f'-map 0:v:0 -map [aout] '
+    #     f'-c:v copy -c:a aac '
+    #     f'-shortest {output_file}'
+    # )
     lumos(magic)
+
 
 def copy_to_dist():
     # copy to dist
     now = pendulum.now("Asia/Shanghai")
-    now_iso = now.to_iso8601_string()[:23].replace(":","-")
+    now_iso = now.to_iso8601_string()[:23].replace(":", "-")
 
     # 定义源文件和目标目录
     source_path = Path("cache/final.mp4")
@@ -98,7 +114,7 @@ def copy_to_dist():
         logger.error(f"{dist_path} Missing")
 
 
-if __name__ == '__main__':
-    for _ in range(100):
+if __name__ == "__main__":
+    for _ in range(10):
         clean_cache()
         launch()

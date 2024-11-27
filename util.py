@@ -12,18 +12,27 @@ from tqdm.rich import tqdm
 # disable warning for tqdm.rich
 import warnings
 from tqdm.std import TqdmExperimentalWarning
+
 warnings.filterwarnings("ignore", category=TqdmExperimentalWarning)
 
-def lumos(cmd, warning=False):
-    # res = 0
-    if warning == True:
+
+def lumos(cmd, mode=1, quiet=False):
+    if mode == 2:
         logger.warning("➜  " + cmd)
-    else:
+    elif mode == 1:
         logger.debug("➜  " + cmd)
+    elif mode == 0:
+        logger.debug("➜  " + cmd)
+    else:
+        raise
+    if quiet == True:
+        cmd = cmd + " >nul 2>&1"
     res = os.system(cmd)
     return res
 
-ffmpeg = ".\\ffmpeg.exe" if Path("./ffmpeg.exe").exists() else "ffmpeg"
+
+ffmpeg = Path("runtime") / "ffmpeg.exe" if (Path("runtime") / "ffmpeg.exe").exists() else "ffmpeg"
+
 
 def make_hash(file_path):
     md5_hash = hashlib.md5()
@@ -40,6 +49,7 @@ def make_hash(file_path):
             sha256_hash.update(data)
 
     return md5_hash.hexdigest(), sha1_hash.hexdigest(), sha256_hash.hexdigest()
+
 
 def show_local(path=Path("./downloads"), prefix=None):
     if not check_folder(path):
@@ -113,11 +123,12 @@ def check_intact(video_path):
         logger.debug("check_intact_inner fail {}".format(video_path))
         return False
 
+
 def clean_cache():
     # 定义缓存文件夹路径
-    cache_folder = Path('cache')
+    cache_folder = Path("cache")
     now = pendulum.now("Asia/Shanghai")
-    now_iso = now.to_iso8601_string()[:23].replace(":","-")
+    now_iso = now.to_iso8601_string()[:23].replace(":", "-")
     # 创建以当前时间命名的子文件夹
     target_dir = cache_folder / now_iso
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -134,7 +145,7 @@ def clean_cache():
 
 
 class Nox:
-    def __init__(self, code, payload = None):
+    def __init__(self, code, payload=None):
         self.code = code
         self.payload = payload
 
@@ -150,11 +161,14 @@ class Nox:
         else:
             return f"Status(code={self.code}, error='{self.payload}')"
 
+
 def set_datetime(record):
     record["extra"]["datetime"] = pendulum.now("Asia/Shanghai").to_iso8601_string()[:23]
 
 
-def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode=2, tqdm_hold=True):
+def logConfig(
+    log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode=2, tqdm_hold=True
+):
     """
     配置 Loguru 日志记录
     :param log_level: 日志级别，如 "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
@@ -225,4 +239,3 @@ def logConfig(log_file="logs/default.log", rotation="10 MB", level="DEBUG", mode
         format=style,
         rotation=rotation,
     )
-

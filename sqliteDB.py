@@ -1,5 +1,6 @@
 from util import logConfig, logger, lumos
 
+
 def init_db(conn, table="master"):
     cursor = conn.cursor()
 
@@ -37,6 +38,7 @@ def fetch_db_by_vid(conn, table, vid):
     else:
         return None
 
+
 def fetch_db_all(conn, table="master"):
     cursor = conn.cursor()
     fetch_all_sql = f"SELECT * FROM {table}"
@@ -46,6 +48,7 @@ def fetch_db_all(conn, table="master"):
         return [tuple_to_dict(cursor, row) for row in results]
     else:
         return []
+
 
 def update_db_by_vid(conn, table, vid, new_values):
     cursor = conn.cursor()
@@ -70,4 +73,3 @@ def delete_db_by_vid(conn, table, vid):
 
 def tuple_to_dict(cursor, row):
     return {column[0]: row[idx] for idx, column in enumerate(cursor.description)}
-
