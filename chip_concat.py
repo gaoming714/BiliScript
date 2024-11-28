@@ -50,7 +50,7 @@ def speed_video(mp4_list, baseline_path, output_path):
     concat_parts = []
 
     for i in range(len(mp4_list)):
-        filter_parts.append(f"[{i}:v]setpts=PTS/{speed_list[i]},scale=1080:1920[v{i}]")
+        filter_parts.append(f"[{i}:v]setpts=PTS/{speed_list[i]}[v{i}]")
         filter_parts.append(f"[{i}:a]atempo={speed_list[i]},volume=1[a{i}]")
         concat_parts.extend([f"[v{i}]", f"[a{i}]"])
 
@@ -118,7 +118,7 @@ def add_intro(volume=1):
     concat_parts = []
 
     for i in range(len(mp4_list)):
-        filter_parts.append(f"[{i}:v]scale=1080:1920[v{i}]")
+        filter_parts.append(f"[{i}:v][v{i}]")
         filter_parts.append(f"[{i}:a]volume={volume}[a{i}]")
         concat_parts.extend([f"[v{i}]", f"[a{i}]"])
 

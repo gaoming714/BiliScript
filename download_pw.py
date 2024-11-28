@@ -56,44 +56,11 @@ def launch():
     if not cookie_check(cookie_path):
         cookie_create(cookie_path)
 
-    with sync_playwright() as p:
-        browser = p.firefox.launch(headless=False)
-        context = browser.new_context(storage_state=Path(cookie_path))
-        page = context.new_page()
-        for user in USER:
-            video_online_vid_list = scrapy_video(page, user["url"])
-            folder = MAIN_PATH / user["symbol"]
-            if not check_folder(folder, True):
-                logger.error(f"No Folder {folder}")
-                continue
-            for vid in video_online_vid_list:
-                v_path = folder / f"{user["symbol"]}.{vid}.mp4"
-                result = sqliteDB.fetch_db_by_vid(conn, "douyin", vid=vid)
-                el = {}
-                el["vid"] = vid
-                el["symbol"] = user["symbol"]
-                el["nickname"] = user["nickname"]
-                el["md5"] = ""
-                if result:
-                    if check_hash(v_path, result["md5"]):
-                        logger.debug(f"Hash Match ID {vid}")
-                        continue
-                    elif result["md5"] == "":
-                        logger.debug(f"Hash Empty ID {vid}")
-                    else:
-                        logger.error(f"Hash Abort ID {vid}")
-                else:
-                    sqliteDB.insert_db(conn, "douyin", el)
-                logger.info(f"MQ for ID {vid}")
-                TQ.put(vid)
-                # if vid not in MQ:
-                #     MQ.append(vid)
-
-            # 下载队列中的视频
-            download_queue()
-
-        # 关闭浏览器
-        browser.close()
+    for user in USER:
+        # 检查目标人物主页，添加queue
+        scrapy_home(user)
+        # 下载队列中的视频
+        download_queue()
 
     if type(conn) == sqlite3.Connection:
         conn.close()  # for sqlite only
@@ -116,7 +83,7 @@ def boot():
 
 def cookie_create(cookie_path=Path() / "cookies" / "download.json"):
     with sync_playwright() as p:
-        browser = p.firefox.launch(headless=False)
+        browser = p.firefox.launch(headless=True)
         context = browser.new_context()
         page = context.new_page()
         # page.set_viewport_size({"width": 1280, "height": 720})
@@ -149,7 +116,7 @@ def cookie_check(cookie_path=Path() / "cookies" / "download.json"):
     if not cookie_path.exists():
         return Nox(-1)
     with sync_playwright() as p:
-        browser = p.firefox.launch(headless=False)
+        browser = p.firefox.launch(headless=True)
         context = browser.new_context(storage_state=Path(cookie_path))
         page = context.new_page()
         # page.set_viewport_size({"width": 1280, "height": 720})
@@ -179,6 +146,40 @@ def cookie_check(cookie_path=Path() / "cookies" / "download.json"):
             time.sleep(1)
             return Nox(0)
 
+def scrapy_home(user):
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=True)
+        context = browser.new_context(storage_state=Path(cookie_path))
+        page = context.new_page()
+        
+        video_online_vid_list = scrapy_video(page, user["url"])
+        folder = MAIN_PATH / user["symbol"]
+        if not check_folder(folder, True):
+            logger.error(f"No Folder {folder}")
+            return
+        for vid in video_online_vid_list:
+            v_path = folder / f"{user["symbol"]}.{vid}.mp4"
+            result = sqliteDB.fetch_db_by_vid(conn, "douyin", vid=vid)
+            el = {}
+            el["vid"] = vid
+            el["symbol"] = user["symbol"]
+            el["nickname"] = user["nickname"]
+            el["md5"] = ""
+            if result:
+                if check_hash(v_path, result["md5"]):
+                    logger.debug(f"Hash Match ID {vid}")
+                    continue
+                elif result["md5"] == "":
+                    logger.debug(f"Hash Empty ID {vid}")
+                else:
+                    logger.error(f"Hash Abort ID {vid}")
+            else:
+                sqliteDB.insert_db(conn, "douyin", el)
+            logger.info(f"MQ for ID {vid}")
+            TQ.put(vid)
+
+        # 关闭浏览器
+        browser.close()
 
 def scrapy_video(page, user_url):
     user_url = pretty_user(user_url)
