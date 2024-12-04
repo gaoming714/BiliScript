@@ -32,6 +32,7 @@ def lumos(cmd, mode=1, quiet=False):
 
 
 ffmpeg = Path("runtime") / "ffmpeg.exe" if (Path("runtime") / "ffmpeg.exe").exists() else "ffmpeg"
+ffprobe= Path("runtime") / "ffprobe.exe" if (Path("runtime") / "ffprobe.exe").exists() else "ffprobe"
 
 
 def make_hash(file_path):

@@ -18,7 +18,7 @@ check:
 	fi
 	@echo -e "✅ ${green}All files checked!${reset}"
 	@if [ -d "runtime" ]; then \
-		echo -e "💊 ${yellow}runtime exists. Run ${green}make clean${reset} first."; \
+		echo -e "💊 ${yellow}runtime exists. Run ${red}make clean${reset} first.(rm runtime folder)"; \
 		exit 1; \
 	fi
 
@@ -29,23 +29,22 @@ requirement:
 
 # Define build target
 build: check
-	@echo -e "👻 ${yellow}Processing files...${reset}"
-	# Copy the tool/runtime folder to the current directory
+	@echo -e "👻 ${green}Copy tool/runtime...${reset}"
 	@mkdir -p runtime
-	@cp -r tool/runtime/* ./runtime/
-	@echo -e "👻 ${green}Copied tool/runtime.${reset}"
-	# Copy all files from tool/ffmpeg to the runtime directory
-	@cp tool/ffmpeg/* ./runtime/
-	@echo -e "👻 ${green}Copied tool/ffmpeg files.${reset}"
-	# Execute dependency installation with retry mechanism
+	@rsync -avq --delete tool/runtime/ ./runtime/
+	@echo -e "👻 ${green}Copy tool/ffmpeg files...${reset}"
+	@rsync -av tool/ffmpeg/ ./runtime/
 	@$(MAKE) pip
 
 # addon
-# @rsync -avq --delete tool/runtime/ ./runtime/
+# @cp -r tool/runtime/* ./runtime/
+# @cp tool/ffmpeg/* ./runtime/
+# @rsync -av --delete tool/runtime/ ./runtime/
 
 # Define the retry installation target for dependencies
 pip:
 	uv export -q -o tool/requirement.txt
+	@echo -e "👻 ${green}Run pip install...${reset}"
 	@max_retries=3; \
 	count=0; \
 	while [ $$count -le $$max_retries ]; do \
