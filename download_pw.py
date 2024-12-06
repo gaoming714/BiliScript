@@ -328,8 +328,6 @@ def download_by_dlpanda(vid, symbol="", path=Path("./downloads")):
     target_path = path / target_name
     cmd = f'{curl} -s -k -o "{target_path}" "{source_url}"'
     # cmd = f'{wget} --no-check-certificate -q -O "{target_path}" "{source_url}"'
-    logger.debug("action")
-    lumos(cmd)
     logger.debug(check_intact(target_path))
     for num in range(3):
         if num != 0:
