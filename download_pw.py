@@ -83,7 +83,7 @@ def boot():
 
 def cookie_create(cookie_path=Path() / "cookies" / "download.json"):
     with sync_playwright() as p:
-        browser = p.firefox.launch(headless=True)
+        browser = p.firefox.launch(headless=False)
         context = browser.new_context()
         page = context.new_page()
         # page.set_viewport_size({"width": 1280, "height": 720})

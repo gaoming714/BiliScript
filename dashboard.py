@@ -25,6 +25,10 @@ cookie_path = Path() / "cookies" / "bilibili.json"
 
 def launch():
     bvid_list = fetch_homepage(mid=30978137)
+    bvid_list.append("BV1AL411Z7Si")
+    bvid_list.append("BV1rY41167UN")
+    bvid_list.append("BV1a1U8YvELw")
+    bvid_list.append("BV1wuUYYoE5b")
     logger.success("online video list")
     logger.success(bvid_list)
     panel = []
@@ -38,6 +42,8 @@ def launch():
     df = pl.DataFrame(panel)
     df = df.with_columns(pl.col("pubdate").dt.convert_time_zone("Asia/Shanghai"))
     df = df.with_columns(pl.col("title").str.slice(0, 10).alias("title"))
+    score_column = (df["reply"]*5 + df["like"] + df["coin"] + df["share"]) / df["view"] * 100
+    df = df.with_columns(score_column.round(2).alias("score"))
 
 
     columns = [col for col in df.columns if col != "title"] + ["title"]
