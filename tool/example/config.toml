@@ -1,0 +1,28 @@
+MAIN_PATH = "./downloads"
+MOONSHOT_API_KEY = "sk-"
+MANUAL = []
+
+
+[[USER]]
+url = "MS4wLjABAAAAsfVoSDqRjyf24ZdQ7vhduNej_KWvFIeY8TfJY9ACrNk"
+nickname = "周栖林"
+symbol = "周栖林"
+folder = "周栖林"
+skip_list = []
+active = true
+
+
+[[USER]]
+url = "MS4wLjABAAAALZ7x3wtt-OX6-FK4xRD-q6C6DXz2LnJYHimSyd34p_PQK_sP4aX9jzQedl2g3EzU"
+nickname = "吴小瑜"
+symbol = "吴小瑜"
+folder = "吴小瑜"
+skip_list = [
+    "7148750055720176931",
+    "7145416285357116687",
+    "7145043396439133455",
+    "7144683631536049408",
+    "7139813483104701737",
+    "7122790062806289698",
+]
+active = false
