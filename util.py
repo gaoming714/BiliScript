@@ -4,6 +4,7 @@ import time
 import json
 import shutil
 import hashlib
+import subprocess
 import pendulum
 from pathlib import Path
 from loguru import logger
@@ -32,7 +33,9 @@ def lumos(cmd, mode=1, quiet=False):
 
 
 ffmpeg = Path("runtime") / "ffmpeg.exe" if (Path("runtime") / "ffmpeg.exe").exists() else "ffmpeg"
-ffprobe= Path("runtime") / "ffprobe.exe" if (Path("runtime") / "ffprobe.exe").exists() else "ffprobe"
+ffprobe = Path("runtime") / "ffprobe.exe" if (Path("runtime") / "ffprobe.exe").exists() else "ffprobe"
+wget = Path("runtime") / "wget.exe" if (Path("runtime") / "wget.exe").exists() else "wget"
+curl = Path("runtime") / "curl.exe" if (Path("runtime") / "curl.exe").exists() else "curl"
 
 
 def make_hash(file_path):
@@ -112,7 +115,7 @@ def check_hash(video_path, md5dot):
         return False
 
 
-def check_intact(video_path):
+def check_intact_old(video_path):
     cmd = "sh intact.sh {}".format(video_path)
     if not video_path.exists():
         logger.error("File not found {}".format(video_path))
@@ -124,6 +127,24 @@ def check_intact(video_path):
         logger.debug("check_intact_inner fail {}".format(video_path))
         return False
 
+def check_intact(file_path):
+    try:
+        result = subprocess.run(
+            [f"{ffmpeg}", "-v", "error", "-i", file_path, "-f", "null", "-"],
+            stderr=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            text=True
+        )
+        if result.stderr.strip():
+            logger.warning("File has errors:")
+            # logger.debug(result.stderr)
+            return False
+        else:
+            logger.debug("File is valid.")
+            return True
+    except Exception as e:
+        # logger.debug(f"Error checking file: {e}")
+        return False
 
 def clean_cache():
     # 定义缓存文件夹路径

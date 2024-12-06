@@ -25,6 +25,8 @@ from util import (
     create_hash,
     check_hash,
     check_intact,
+    wget,
+    curl,
     Nox,
 )
 
@@ -193,11 +195,10 @@ def scrapy_video(page, user_url):
     video_count = 0
     retry_flag = 0
     while True:
-        new_count = video_count
         video_els = page.locator(".TyuBARdT")
         new_count = video_els.count()
         if new_count == video_count:
-            logger.debug("same length videos")
+            logger.debug(f"same length videos {new_count}")
             if retry_flag <= 2:
                 retry_flag += 1
             else:
@@ -206,6 +207,10 @@ def scrapy_video(page, user_url):
             video_count = new_count
         page.locator(".z_YvCWYy").hover()
         time.sleep(0.2)
+        page.mouse.wheel(0, 1000)
+        time.sleep(0.5)
+        page.mouse.wheel(0, 1000)
+        time.sleep(0.5)
         page.mouse.wheel(0, 1000)
         time.sleep(1)
     out_vid_list = []
@@ -321,8 +326,11 @@ def download_by_dlpanda(vid, symbol="", path=Path("./downloads")):
 
     target_name = f"{symbol}.{vid}.mp4"
     target_path = path / target_name
-    cmd = f"curl -s -k -o '{target_path}' '{source_url}'"
-    # logger.debug(cmd)
+    cmd = f'{curl} -s -k -o "{target_path}" "{source_url}"'
+    # cmd = f'{wget} --no-check-certificate -q -O "{target_path}" "{source_url}"'
+    logger.debug("action")
+    lumos(cmd)
+    logger.debug(check_intact(target_path))
     for num in range(3):
         if num != 0:
             logger.warning(f"Retry \n Retry {num} times for ID {vid}")

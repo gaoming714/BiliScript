@@ -34,6 +34,8 @@ build: check
 	@rsync -avq --delete tool/runtime/ ./runtime/
 	@echo -e "👻 ${green}Copy tool/ffmpeg files...${reset}"
 	@rsync -av tool/ffmpeg/ ./runtime/
+	@echo -e "👻 ${green}Copy tool/utility files...${reset}"
+	@rsync -av tool/utility/ ./runtime/
 	@$(MAKE) pip
 
 # addon

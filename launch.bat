@@ -1,37 +1,37 @@
 @echo off
 
-REM 设置 cmd 编码为 UTF-8
+REM Set cmd encoding to UTF-8
 chcp 65001 >nul
 
-REM 设置Python解释器路径
+REM Set Python interpreter path
 set PYTHON_EXEC=runtime\python.exe
 
-REM 获取传入的第一个参数作为脚本路径
+REM Get the first argument as the script path
 set SCRIPT=%1
 
-REM 检查是否传入参数
+REM Check if the parameter is provided
 if "%SCRIPT%"=="" (
-    echo 请提供脚本文件作为第一个参数。
+    echo Please provide the script file as the first parameter.
     pause
     exit /b
 )
 
-REM 检查Python解释器是否存在
+REM Check if the Python interpreter exists
 if not exist %PYTHON_EXEC% (
-    echo 未找到 %PYTHON_EXEC%，请确保路径正确。
+    echo %PYTHON_EXEC% not found, please ensure the path is correct.
     pause
     exit /b
 )
 
-REM 检查脚本是否存在
+REM Check if the script exists
 if not exist %SCRIPT% (
-    echo 未找到脚本 %SCRIPT%，请确保路径正确。
+    echo Script %SCRIPT% not found, please ensure the path is correct.
     pause
     exit /b
 )
 
-REM 执行Python脚本
+REM Execute the Python script
 %PYTHON_EXEC% %SCRIPT%
 
-REM 等待用户查看输出
+REM Wait for user to view the output
 pause
