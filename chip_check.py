@@ -45,7 +45,7 @@ def launch():
     # 查找所有 mp4 文件并验证
     non_compliant_files = []
     for mp4_file in clips_dir.rglob("*.mp4"):
-        if mp4_file.name.endswith('_convert.mp4'):
+        if mp4_file.name.endswith('_converted.mp4'):
             continue
         if not check_video(mp4_file):
             non_compliant_files.append(mp4_file)
