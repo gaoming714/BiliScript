@@ -76,9 +76,9 @@ def fetch(user_content=None, system_content=None, temp=0.618):
     content = completion.choices[0].message.content
     if "data" in content:
         # print(json.loads(content)["data"])
-        return json.loads(content)
+        return json.loads(content)["data"]
     else:
-        raise
+        return ""
 
 
 def launch():

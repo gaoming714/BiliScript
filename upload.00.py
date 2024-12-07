@@ -36,10 +36,10 @@ def launch():
             logger.info(f"{item} - Waiting kimiDB")
             title = kimiDB.fetch(
                 "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题"
-            )["data"]
+            )
             key_list = kimiDB.fetch(
                 "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词"
-            )["data"]
+            )
             page.goto(
                 "https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload"
             )

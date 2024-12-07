@@ -36,11 +36,11 @@ def launch():
             logger.info(f"{item} - Waiting kimiDB")
             title = kimiDB.fetch(
                 "收下这份美女,教你卡点舞动起来 , 仿写这个标题，不要标点最多20个字"
-            )["data"]
+            )
             article = kimiDB.fetch(
                 "收下这份美女 ， 模特, 给我一小段小红书文案，简短的"
-            )["data"]
-            key_list = kimiDB.fetch("收下这份美女 , 模特，给我5个关键词")["data"]
+            )
+            key_list = kimiDB.fetch("收下这份美女 , 模特，给我5个关键词")
             page.goto("https://creator.xiaohongshu.com/publish/publish?from=menu")
             time.sleep(3)
             # upload file

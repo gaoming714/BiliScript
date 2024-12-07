@@ -13,6 +13,7 @@ import requests
 
 import tomllib
 import kimiDB
+from datetime import datetime
 
 from util import logConfig, logger, lumos, Nox
 
@@ -22,6 +23,10 @@ Pooh = {}
 
 cookie_path = Path() / "cookies" / "bilibili.json"
 
+def func(date):
+    # 这里举例：返回距今天数
+    today = datetime.today()
+    return (today - date).days
 
 def launch():
     bvid_list = fetch_homepage(mid=30978137)
@@ -37,24 +42,28 @@ def launch():
         if res:
             panel.append(res.payload)
     # polars
-    pl.Config.set_tbl_cols(50)  # 设置显示的最大列数
-    pl.Config.set_tbl_rows(200)  # 设置显示的最大行数
-    df = pl.DataFrame(panel)
-    df = df.with_columns(pl.col("pubdate").dt.convert_time_zone("Asia/Shanghai"))
-    df = df.with_columns(pl.col("title").str.slice(0, 10).alias("title"))
-    score_column = (df["reply"]*5 + df["like"] + df["coin"] + df["share"]) / df["view"] * 100
-    df = df.with_columns(score_column.round(2).alias("score"))
+    # pl.Config.set_tbl_cols(50)  # 设置显示的最大列数
+    # pl.Config.set_tbl_rows(200)  # 设置显示的最大行数
+    # df = pl.DataFrame(panel)
+    # df = df.with_columns(pl.col("pubdate").dt.convert_time_zone("Asia/Shanghai"))
+    # df = df.with_columns(pl.col("title").str.slice(0, 10).alias("title"))
+    # score_column = (df["reply"]*5 + df["like"] + df["coin"] + df["share"]) / df["view"] * 100
+    # df = df.with_columns(score_column.round(2).alias("score"))
 
-
-    columns = [col for col in df.columns if col != "title"] + ["title"]
-    df = df.select(columns)
+    # columns = [col for col in df.columns if col != "title"] + ["title"]
+    # df = df.select(columns)
 
     # pandas
-    # df = pd.DataFrame(panel)
-    # df["pubdate"] = df["pubdate"].dt.tz_convert("Asia/Shanghai")
-    # df["title"] = df["title"].str[:10]
-    # columns = [col for col in df.columns if col != "title"] + ["title"]
-    # df = df[columns]
+    df = pd.DataFrame(panel)
+    df["pubdate"] = df["pubdate"].dt.tz_convert("Asia/Shanghai")
+    df["title"] = df["title"].str[:10]
+    today = pd.Timestamp(datetime.now()).tz_localize("Asia/Shanghai")
+    days_from_today = -(df['pubdate'] - today).dt.days
+    score_column = (df["reply"]*5 + df["like"] + df["coin"] + df["share"]) / df["view"] * 100
+    df["score"] = score_column.round(2)
+
+    columns = [col for col in df.columns if col != "title"] + ["title"]
+    df = df[columns]
     print(df)
     raise
 
@@ -90,10 +99,10 @@ def launch():
             logger.info(f"{item} - Waiting kimiDB")
             title = kimiDB.fetch(
                 "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题"
-            )["data"]
+            )
             key_list = kimiDB.fetch(
                 "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词"
-            )["data"]
+            )
             page.goto(
                 "https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload"
             )
