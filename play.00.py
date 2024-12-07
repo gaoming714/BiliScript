@@ -18,17 +18,45 @@ logConfig("logs/default.log", rotation="10 MB", level="DEBUG", mode=1)
 
 Pooh = {}
 
-cookie_path = Path() / "cookies" / "bilibili_master.json"
+cookie_path = Path() / "cookies" / "bilibili_slaver.json"
 
 
 def launch():
     if not cookie_check():
         cookie_create()
+    bvid_list = fetch_homepage(mid=30978137)
 
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False)
         context = browser.new_context(storage_state=Path(cookie_path))
         page = context.new_page()
+        # pbar = tqdm(total=len(bvid_list))
+        for index, item in enumerate(bvid_list):
+            logger.info(f"{item}")
+            page.goto(
+                f"https://www.bilibili.com/video/{item}/"
+            )
+            time.sleep(3)
+            page.locator("video").click()
+            time.sleep(1)
+            if page.locator(".video-like.on").count():
+                logger.debug("已经点赞")
+                continue
+            else:
+                page.locator(".video-like").click()
+                title = page.locator(".video-info-title").inner_text()
+                logger.debug(f"title: {title}")
+                res = kimiDB.fetch(f"这里是标题：{title}, 参考这个标题，提出一个简短的引战话题")
+                logger.debug(res)
+                # page.mouse.wheel(0, 1000)
+                time.sleep(0.5)
+                ipdb.set_trace()
+                page.locator("#commentbox  #input").first.click()
+                page.locator("#commentbox  #input").first.fill(f"{res} \n这里留言给你发脸换资源")
+                time.sleep(1)
+                page.get_by_role("button", name="发布").click()
+
+
         dist_folder = Path("dist")
         mp4_list = list(dist_folder.glob("*.mp4"))
         pbar = tqdm(total=len(mp4_list))
@@ -49,9 +77,9 @@ def launch():
             # magic_text
             magic_text(page, title, "article", key_list)
             # pub clock
-            tick = pendulum.parse("2024-12-08 06:00:00")
+            tick = pendulum.parse("2024-11-21 15:00:00")
             target_tick = tick.add(hours=1 * index)
-            pub_clock(page, target_tick)
+            pub_clock(page, str(target_tick))
             # submit
             page.locator(".submit-add").click()
             logger.success(f"{item}")
@@ -114,6 +142,22 @@ def cookie_check():
             logger.success("login success")
             return True
 
+def fetch_homepage(mid=None):
+    logger.debug("Fetch home")
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto(f"https://space.bilibili.com/{mid}/video")
+        time.sleep(2)
+
+        elem = page.locator("li.small-item a.title")
+        vid_list = []
+        for index in range(elem.count()):
+            href = elem.nth(index).get_attribute("href")
+            vid = href.split("/")[-2]
+            vid_list.append(vid)
+        return vid_list
 
 def upload_file(page, mode, file_path):
     logger.debug("Upload launch")
@@ -153,9 +197,16 @@ def magic_text(page, title, article, keyword_list):
 
 
 def pub_clock(page, pub_dt):
-    logger.debug(f"Pub clock launch => {pub_dt}")
+    logger.debug("Pub clock launch")
+    pub_dt = pendulum.parse(pub_dt)
     now = pendulum.now("Asia/Shanghai")
+
     page.locator(".time-switch-wrp").locator(".switch-container").click()
+    time.sleep(0.5)
+    # page.locator(".date-picker-date").locator("p").evaluate(f"element => element.textContent = '{pub_tuple[0]}'")
+    # time.sleep(0.5)
+    # page.locator(".date-picker-timer").locator("p").evaluate(f"element => element.textContent = '{pub_tuple[1]}'")
+    # time.sleep(0.5)
     time.sleep(0.5)
     page.locator(".date-picker-date").click()
     time.sleep(0.5)
@@ -189,6 +240,7 @@ def boot():
 
 
 if __name__ == "__main__":
+    # cookie_create()
     boot()
     # print(Pooh)
     # raise
