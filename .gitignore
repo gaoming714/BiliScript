@@ -7,8 +7,7 @@ downloads/
 logs/
 runtime/
 tool/
-launch.bat
-launch_pw.bat
+
 
 node_modules/
 uploads/
