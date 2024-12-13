@@ -32,8 +32,8 @@ def launch():
     speed_video(left_list, audio_path, left_video, 8)  # create left and right
     speed_video(right_list, audio_path, right_video, 8)  # create left and right
 
-    background_path = Path() / "data" / "video" / "white_video.mp4"
-    mixin_video(background_path)
+    background_path = Path() / "data" / "video" / "background.mp4"
+    mixin_video(background_path, audio_path)
     add_bgm(audio_path)
     copy_to_dist()
 
@@ -75,8 +75,7 @@ def speed_video(mp4_list, baseline_path, output_path, sample=None):
     lumos(magic)
 
 
-def mixin_video(background_path):
-    # video_background_path = Path() / "cache" / "video_background.mp4"
+def mixin_video(bg_path, audio_path):
     video_left_path = Path() / "cache" / "video_left.mp4"
     video_right_path = Path() / "cache" / "video_right.mp4"
     output_file = Path() / "cache" / "video_mixin.mp4"
@@ -87,11 +86,11 @@ def mixin_video(background_path):
         "[bg_v1][v2_scaled]overlay=x=W-w-100:y=-150[final]"
     )
 
-    input_files = f"-i {background_path} -i {video_left_path} -i {video_right_path}"
+    input_files = f"-i {bg_path} -i {video_left_path} -i {video_right_path} -i {audio_path}"
     magic = (
         f"{ffmpeg} {input_files} "
         f'-filter_complex "{filter_complex}" '
-        f'-map "[final]" -map 0:a '
+        f'-map "[final]" -map 3:a '
         f"-c:v libx264 -c:a aac "
         f"{output_file}"
     )
@@ -133,5 +132,6 @@ def copy_to_dist():
 
 
 if __name__ == "__main__":
-    clean_cache()
-    launch()
+    for _ in range(10):
+        clean_cache()
+        launch()
