@@ -35,7 +35,7 @@ build: check
 	@echo -e "👻 ${green}Copy tool/ffmpeg files...${reset}"
 	@rsync -av tool/ffmpeg/ ./runtime/
 	@echo -e "👻 ${green}Copy tool/utility files...${reset}"
-	@rsync -av tool/utility/ ./runtime/
+	@rsync -av tool/utility/ ./
 	@$(MAKE) pip
 
 # addon
@@ -76,5 +76,7 @@ package:
 clean:
 	@echo -e "👻 ${yellow}Removing the 'runtime' directory...${reset}"
 	@rm -rf runtime
+	@rm ./launch.bat
+	@rm ./launch_pw.bat
 	@echo -e "✅ ${green}runtime directory cleaned!${reset}"
 

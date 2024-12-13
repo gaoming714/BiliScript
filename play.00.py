@@ -124,7 +124,6 @@ def cookie_check():
         time.sleep(3)
         if page.locator(".header-login-entry").count():
             logger.warning("Not Login")
-            ipdb.set_trace()
             if cookie_path.exists():
                 logger.warning(f"cookie out of time delete. {cookie_path}")
                 magic = f"rm {cookie_path}"

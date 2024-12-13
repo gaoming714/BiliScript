@@ -26,20 +26,33 @@ def check_video(file_path):
         logger.info(f"Error checking file {file_path}: {e}")
     return False
 
-# 转换不符合条件的视频
 def convert_video(file_path):
     try:
-        output_path = file_path.with_name(file_path.stem + "_converted.mp4")
+        file_path = Path(file_path)
+        originals_dir = file_path.parent / "originals"  # 子目录存放原始文件
+        originals_dir.mkdir(exist_ok=True)  # 如果不存在，创建目录
+
+        origin_path = originals_dir / (file_path.stem + file_path.suffix)  # 子目录中的原始文件路径
+        output_path = file_path  # 转换后的文件名与原文件名相同
+
+        # 将原始文件移动到子目录
+        file_path.rename(origin_path)
         
         # 使用 ffmpeg 转换视频分辨率和 SAR
         command = (
-            f"{ffmpeg} -i \"{file_path}\" -vf \"scale={target_resolution},setsar={target_sar}\" "
+            f"{ffmpeg} -i \"{origin_path}\" -vf \"scale={target_resolution},setsar={target_sar}\" "
             f"-c:v libx264 -crf 22 -c:a aac \"{output_path}\""
         )
         subprocess.check_call(command, shell=True)
-        logger.success(f"Successfully converted {file_path} to {output_path}")
+        logger.info(f"Successfully converted {origin_path} to {output_path}")
     except subprocess.CalledProcessError as e:
-        logger.info(f"Error converting file {file_path}: {e}")
+        logger.error(f"Error converting file {file_path}: {e}")
+        # 如果转换失败，将文件移回原目录
+        if origin_path.exists():
+            origin_path.rename(file_path)
+            logger.info(f"Restored original file to {file_path}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
 
 def launch():
     # 查找所有 mp4 文件并验证

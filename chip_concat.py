@@ -20,12 +20,11 @@ cache工作目录
 def launch():
     clip_folder = Path("data/clips")
     mp4_list = list(clip_folder.glob("**/*.mp4"))
-    random.shuffle(mp4_list)
-    mp4_list = mp4_list[:12]
     logger.debug("Select: ", mp4_list)
     audio_path = Path() / "data" / "audio" / "bgm.mp4"
     concat_path = Path() / "cache" / "concat.mp4"
-    speed_video(mp4_list, audio_path, concat_path)
+    concat_bpm_video(mp4_list, audio_path, concat_path, sample=10)
+    # concat_speed_video(mp4_list, 1.2, concat_path, sample=10)
     add_bgm(audio_path)
     add_intro()
     copy_to_dist()
@@ -37,11 +36,13 @@ def get_bpm(audio_file):
     return tempo[0]
 
 
-def speed_video(mp4_list, baseline_path, output_path):
+def concat_bpm_video(mp4_list, baseline_path, output_path, sample=None):
+    if sample:
+        chip_list = random.sample(mp4_list, sample)
     baseline = get_bpm(baseline_path)
-    bpm_list = [get_bpm(video) for video in mp4_list]
+    bpm_list = [get_bpm(video) for video in chip_list]
     # input_files = "-i a.mp4"
-    input_files = " ".join([f"-i {file}" for file in mp4_list])  # "-i mp4 -i mp4"
+    input_files = " ".join([f"-i {file}" for file in chip_list])  # "-i mp4 -i mp4"
 
     speed_list = [baseline / bpm for bpm in bpm_list]
     speed_list = [max(0.5, min(speed, 100)) for speed in speed_list]
@@ -49,14 +50,44 @@ def speed_video(mp4_list, baseline_path, output_path):
     filter_parts = []
     concat_parts = []
 
-    for i in range(len(mp4_list)):
+    for i in range(len(chip_list)):
         filter_parts.append(f"[{i}:v]setpts=PTS/{speed_list[i]}[v{i}]")
         filter_parts.append(f"[{i}:a]atempo={speed_list[i]},volume=1[a{i}]")
         concat_parts.extend([f"[v{i}]", f"[a{i}]"])
 
     filter_complex = (
         "; ".join(filter_parts)
-        + f"; {''.join(concat_parts)}concat=n={len(mp4_list)}:v=1:a=1[v][a]"
+        + f"; {''.join(concat_parts)}concat=n={len(chip_list)}:v=1:a=1[v][a]"
+    )
+    magic = (
+        f"{ffmpeg} {input_files} "
+        f'-filter_complex "{filter_complex}" '
+        f'-map "[v]" -map "[a]" '
+        f"-c:v libx264 -c:a aac "
+        f"-r 60 "
+        f"{output_path}"
+    )
+    lumos(magic)
+
+
+def concat_speed_video(mp4_list, speed, output_path, sample=None):
+    if sample:
+        chip_list = random.sample(mp4_list, sample)
+    input_files = " ".join([f"-i {file}" for file in chip_list])  # "-i mp4 -i mp4"
+
+    speed_list = [speed for _ in chip_list]
+
+    filter_parts = []
+    concat_parts = []
+
+    for i in range(len(chip_list)):
+        filter_parts.append(f"[{i}:v]setpts=PTS/{speed_list[i]}[v{i}]")
+        filter_parts.append(f"[{i}:a]atempo={speed_list[i]},volume=1[a{i}]")
+        concat_parts.extend([f"[v{i}]", f"[a{i}]"])
+
+    filter_complex = (
+        "; ".join(filter_parts)
+        + f"; {''.join(concat_parts)}concat=n={len(chip_list)}:v=1:a=1[v][a]"
     )
     magic = (
         f"{ffmpeg} {input_files} "
@@ -118,7 +149,7 @@ def add_intro(volume=1):
     concat_parts = []
 
     for i in range(len(mp4_list)):
-        filter_parts.append(f"[{i}:v][v{i}]")
+        filter_parts.append(f"[{i}:v]null[v{i}]")
         filter_parts.append(f"[{i}:a]volume={volume}[a{i}]")
         concat_parts.extend([f"[v{i}]", f"[a{i}]"])
 

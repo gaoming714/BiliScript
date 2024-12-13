@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.12.3",
+    "click>=8.1.7",
     "ipdb>=0.13.13",
     "ipython>=8.29.0",
     "librosa>=0.10.2.post1",
