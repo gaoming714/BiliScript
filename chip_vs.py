@@ -26,7 +26,7 @@ def launch():
     right_list = list(right_folder.glob("*.mp4"))
     random.shuffle(right_list)
 
-    audio_path = Path() / "data" / "audio" / "drop.aac"
+    audio_path = Path() / "data" / "video" / "bgm.mp4"
     left_video = Path() / "cache" / "video_left.mp4"
     right_video = Path() / "cache" / "video_right.mp4"
     speed_video(left_list, audio_path, left_video, 8)  # create left and right
