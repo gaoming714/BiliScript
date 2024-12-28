@@ -5,7 +5,15 @@ import click
 from pathlib import Path
 import pendulum
 import shutil
-from util import logConfig, logger, lumos, clean_cache, ffmpeg, Nox
+from util import (
+    logConfig,
+    logger,
+    lumos,
+    clean_cache,
+    ffmpeg,
+    Nox,
+    fetch_video_duration,
+)
 
 logConfig("logs/concat.log", rotation="10 MB", level="DEBUG", mode=1)
 
@@ -83,13 +91,15 @@ def mixin_video(bg_path, audio_path):
     video_left_path = Path() / "cache" / "video_left.mp4"
     video_right_path = Path() / "cache" / "video_right.mp4"
     output_file = Path() / "cache" / "video_mixin.mp4"
+    duration = min(
+        fetch_video_duration(video_left_path), fetch_video_duration(video_right_path)
+    )
     filter_complex = (
         " [1:v]scale=iw*0.74:ih*0.74[v1_scaled];"
         " [2:v]scale=iw*0.74:ih*0.74[v2_scaled];"
         " [0:v][v1_scaled]overlay=x=100:y=-150[bg_v1];"
         " [bg_v1][v2_scaled]overlay=x=W-w-100:y=-150[final]"
     )
-
     input_files = (
         f"-i {bg_path} -i {video_left_path} -i {video_right_path} -i {audio_path}"
     )
@@ -97,12 +107,11 @@ def mixin_video(bg_path, audio_path):
         f"{ffmpeg} {input_files}"
         f' -filter_complex "{filter_complex}"'
         f' -map "[final]" -map 3:a'
+        f" -t {duration}"
         f" -c:v libx264 -c:a aac"
-        f' -r 60'
+        f" -r 60"
         f" {output_file}"
     )
-    print(magic)
-
     lumos(magic)
 
 

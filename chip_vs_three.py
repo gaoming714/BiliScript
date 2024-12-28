@@ -28,13 +28,13 @@ cache工作目录 将left和right合并最后拼接上background
 
 
 def launch():
-    left_folder = Path("data/clips")
+    left_folder = Path("data/left")
     left_list = list(left_folder.glob("*.mp4"))
     random.shuffle(left_list)
-    mid_folder = Path("data/clips")
+    mid_folder = Path("data/mid")
     mid_list = list(mid_folder.glob("*.mp4"))
     random.shuffle(mid_list)
-    right_folder = Path("data/clips")
+    right_folder = Path("data/right")
     right_list = list(right_folder.glob("*.mp4"))
     random.shuffle(right_list)
 
@@ -110,7 +110,6 @@ def mixin_video(bg_path, audio_path):
         " [v1][v2][v3]hstack=inputs=3[stacked];"
         " [0:v][stacked]overlay=x=0:y=-0[final]"
     )
-
     input_files = f"-i {bg_path} -i {video_left_path} -i {video_mid_path} -i {video_right_path} -i {audio_path}"
     magic = (
         f"{ffmpeg} {input_files}"
