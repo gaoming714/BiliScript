@@ -165,6 +165,34 @@ def clean_cache():
                 shutil.move(item, target_dir / item.name)
         print("Cache folder cleared.")
 
+def fetch_video_duration(file_path):
+    # 确保 file_path 是 Path 对象
+    file_path = Path(file_path)
+    # 检查文件是否存在
+    if not file_path.is_file():
+        raise FileNotFoundError(f"文件 {file_path} 不存在")
+    # 使用 ffprobe 获取视频信息，ffprobe 是 ffmpeg 的一个工具
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            file_path,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    # 读取时长（单位为秒），并转换为浮点数
+    duration = float(result.stdout.strip())
+    if duration > 0:
+        return duration
+    else:
+        raise RuntimeError(f"ffprobe 调用失败: duration is zero")
 
 class Nox:
     def __init__(self, code, payload=None):

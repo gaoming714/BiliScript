@@ -53,7 +53,7 @@ def ask(user_content=None, system_content=None, temp=0.618):
 def fetch(user_content=None, system_content=None, temp=0.618):
     if not system_content:
         system_content = """
-            小小酥是人名，你擅长写小红书文案。必须包含Powered by 。请输出json格式，key='data'
+            小小酥是人名，程Yoooo也是人名，你擅长写B站文案，热别擅长吸引用户弹幕或者评论，支持喜欢的人。必须包含Powered by 。请输出json格式，key='data'
             """
     client = OpenAI(
         api_key=Pooh["MOONSHOT_API_KEY"],

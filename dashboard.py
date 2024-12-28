@@ -59,7 +59,7 @@ def launch():
     df["title"] = df["title"].str[:10]
     today = pd.Timestamp(datetime.now()).tz_localize("Asia/Shanghai")
     days_from_today = -(df['pubdate'] - today).dt.days
-    score_column = (df["reply"]*5 + df["like"] + df["coin"] + df["share"]) / df["view"] * 100
+    score_column = (df["reply"] + df["danmaku"] + df["like"] + df["coin"] + df["share"]) / df["view"] * 100
     df["score"] = score_column.round(2)
 
     columns = [col for col in df.columns if col != "title"] + ["title"]
@@ -202,6 +202,7 @@ def fetch_video(bvid=None):
         pubdate - dt = pendulum.from_timestamp(timestamp)
         duration
         stat.view
+        stat.danmaku
         stat.reply
         stat.like
         stat.favorite
@@ -232,6 +233,7 @@ def fetch_video(bvid=None):
     res_dict["pubdate"] = pendulum.from_timestamp(data["pubdate"], tz="Asia/Shanghai")
     res_dict["duration"] = data["duration"]
     res_dict["view"] = data["stat"]["view"]
+    res_dict["danmaku"] = data["stat"]["danmaku"]
     res_dict["reply"] = data["stat"]["reply"]
     res_dict["like"] = data["stat"]["like"]
     res_dict["favorite"] = data["stat"]["favorite"]

@@ -1,6 +1,7 @@
 import time
 import librosa
 import random
+import click
 from pathlib import Path
 import pendulum
 import shutil
@@ -20,12 +21,12 @@ cache工作目录
 def launch():
     clip_folder = Path("data/clips")
     mp4_list = list(clip_folder.glob("**/*.mp4"))
-    logger.debug("Select: ", mp4_list)
-    audio_path = Path() / "data" / "audio" / "bgm.mp4"
+    audio_path = Path() / "data" / "video" / "bgm.mp4"
     concat_path = Path() / "cache" / "concat.mp4"
-    concat_bpm_video(mp4_list, audio_path, concat_path, sample=10)
-    # concat_speed_video(mp4_list, 1.2, concat_path, sample=10)
+    concat_bpm_video(mp4_list, audio_path, concat_path, sample=15)
     add_bgm(audio_path)
+    # concat_speed_video(mp4_list, 1, concat_path, sample=10)
+    # shutil.copy(concat_path, Path() / "cache" / "main.mp4")
     add_intro()
     copy_to_dist()
 
@@ -60,12 +61,12 @@ def concat_bpm_video(mp4_list, baseline_path, output_path, sample=None):
         + f"; {''.join(concat_parts)}concat=n={len(chip_list)}:v=1:a=1[v][a]"
     )
     magic = (
-        f"{ffmpeg} {input_files} "
-        f'-filter_complex "{filter_complex}" '
-        f'-map "[v]" -map "[a]" '
-        f"-c:v libx264 -c:a aac "
-        f"-r 60 "
-        f"{output_path}"
+        f"{ffmpeg} {input_files}"
+        f' -filter_complex "{filter_complex}"'
+        f' -map "[v]" -map "[a]"'
+        f" -c:v libx264 -c:a aac"
+        f" -r 60"
+        f" {output_path}"
     )
     lumos(magic)
 
@@ -90,12 +91,12 @@ def concat_speed_video(mp4_list, speed, output_path, sample=None):
         + f"; {''.join(concat_parts)}concat=n={len(chip_list)}:v=1:a=1[v][a]"
     )
     magic = (
-        f"{ffmpeg} {input_files} "
-        f'-filter_complex "{filter_complex}" '
-        f'-map "[v]" -map "[a]" '
-        f"-c:v libx264 -c:a aac "
-        f"-r 60 "
-        f"{output_path}"
+        f"{ffmpeg} {input_files}"
+        f' -filter_complex "{filter_complex}"'
+        f' -map "[v]" -map "[a]"'
+        f" -c:v libx264 -c:a aac"
+        f" -r 60"
+        f" {output_path}"
     )
     lumos(magic)
 
@@ -107,12 +108,12 @@ def add_bgm(audio_path, volume=1):
     input_files = f"-i {video_path} -i {audio_path}"
     # audio shortest
     magic = (
-        f"{ffmpeg} {input_files} "
-        f"-map 0:v:0 -map 1:a:0 "
-        f"-c:v copy -c:a aac "
-        f'-filter:a "volume={volume}" '
-        f"-shortest "
-        f"{output_file}"
+        f"{ffmpeg} {input_files}"
+        f" -map 0:v:0 -map 1:a:0"
+        f" -c:v copy -c:a aac"
+        f' -filter:a "volume={volume}"'
+        f" -shortest"
+        f" {output_file}"
     )
     # audio loop
     # magic = (
@@ -123,6 +124,7 @@ def add_bgm(audio_path, volume=1):
     #     f'-shortest {output_file}'
     # )
     lumos(magic)
+
 
 
 def add_intro(volume=1):
@@ -158,12 +160,12 @@ def add_intro(volume=1):
         + f"; {''.join(concat_parts)}concat=n={len(mp4_list)}:v=1:a=1[v][a]"
     )
     magic = (
-        f"{ffmpeg} {input_files} "
-        f'-filter_complex "{filter_complex}" '
-        f'-map "[v]" -map "[a]" '
-        f"-c:v libx264 -c:a aac "
-        f"-r 60 "
-        f"{output_path}"
+        f"{ffmpeg} {input_files}"
+        f' -filter_complex "{filter_complex}"'
+        f' -map "[v]" -map "[a]"'
+        f" -c:v libx264 -c:a aac"
+        f" -r 60"
+        f" {output_path}"
     )
     lumos(magic)
 
@@ -189,7 +191,14 @@ def copy_to_dist():
         logger.error(f"{dist_path} Missing")
 
 
-if __name__ == "__main__":
-    for _ in range(10):
+@click.command()
+@click.option('-r', '--repeat', default=10, type=int, help="Number of repetitions")
+def UEFI(repeat):
+    global Pooh
+    # Pooh["debug"] = debug
+    for _ in range(repeat):
         clean_cache()
         launch()
+
+if __name__ == "__main__":
+    UEFI()

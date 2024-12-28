@@ -5,7 +5,15 @@ import click
 from pathlib import Path
 import pendulum
 import shutil
-from util import logConfig, logger, lumos, clean_cache, ffmpeg, Nox
+from util import (
+    logConfig,
+    logger,
+    lumos,
+    clean_cache,
+    ffmpeg,
+    Nox,
+    fetch_video_duration,
+)
 
 logConfig("logs/concat.log", rotation="10 MB", level="DEBUG", mode=1)
 
@@ -20,18 +28,23 @@ cache工作目录 将left和right合并最后拼接上background
 
 
 def launch():
-    left_folder = Path("data/left")
+    left_folder = Path("data/clips")
     left_list = list(left_folder.glob("*.mp4"))
     random.shuffle(left_list)
-    right_folder = Path("data/right")
+    mid_folder = Path("data/clips")
+    mid_list = list(mid_folder.glob("*.mp4"))
+    random.shuffle(mid_list)
+    right_folder = Path("data/clips")
     right_list = list(right_folder.glob("*.mp4"))
     random.shuffle(right_list)
 
     audio_path = Path() / "data" / "video" / "bgm.mp4"
     left_video = Path() / "cache" / "video_left.mp4"
+    mid_video = Path() / "cache" / "video_mid.mp4"
     right_video = Path() / "cache" / "video_right.mp4"
-    speed_video(left_list, audio_path, left_video, 15)  # create left and right
-    speed_video(right_list, audio_path, right_video, 8)  # create left and right
+    speed_video(left_list, audio_path, left_video, 10)  # create left and right
+    speed_video(mid_list, audio_path, mid_video, 10)  # create left and right
+    speed_video(right_list, audio_path, right_video, 10)  # create left and right
 
     background_path = Path() / "data" / "video" / "background.mp4"
     mixin_video(background_path, audio_path)
@@ -81,28 +94,33 @@ def speed_video(mp4_list, baseline_path, output_path, sample=None):
 
 def mixin_video(bg_path, audio_path):
     video_left_path = Path() / "cache" / "video_left.mp4"
+    video_mid_path = Path() / "cache" / "video_mid.mp4"
     video_right_path = Path() / "cache" / "video_right.mp4"
     output_file = Path() / "cache" / "video_mixin.mp4"
+    duration = min(
+        map(
+            lambda a: fetch_video_duration(a),
+            [video_left_path, video_mid_path, video_right_path],
+        )
+    )
     filter_complex = (
-        " [1:v]scale=iw*0.74:ih*0.74[v1_scaled];"
-        " [2:v]scale=iw*0.74:ih*0.74[v2_scaled];"
-        " [0:v][v1_scaled]overlay=x=100:y=-150[bg_v1];"
-        " [bg_v1][v2_scaled]overlay=x=W-w-100:y=-150[final]"
+        " [1:v]scale=iw*0.592:ih*0.593[v1];"
+        " [2:v]scale=iw*0.593:ih*0.593[v2];"
+        " [3:v]scale=iw*0.593:ih*0.593[v3];"
+        " [v1][v2][v3]hstack=inputs=3[stacked];"
+        " [0:v][stacked]overlay=x=0:y=-0[final]"
     )
 
-    input_files = (
-        f"-i {bg_path} -i {video_left_path} -i {video_right_path} -i {audio_path}"
-    )
+    input_files = f"-i {bg_path} -i {video_left_path} -i {video_mid_path} -i {video_right_path} -i {audio_path}"
     magic = (
         f"{ffmpeg} {input_files}"
         f' -filter_complex "{filter_complex}"'
         f' -map "[final]" -map 3:a'
+        f" -t {duration}"
         f" -c:v libx264 -c:a aac"
-        f' -r 60'
+        f" -r 60"
         f" {output_file}"
     )
-    print(magic)
-
     lumos(magic)
 
 

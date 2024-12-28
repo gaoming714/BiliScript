@@ -74,6 +74,8 @@ dependencies = [
     { name = "playwright" },
     { name = "polars" },
     { name = "rich" },
+    { name = "soundfile" },
+    { name = "srt" },
     { name = "tenacity" },
     { name = "tqdm" },
 ]
@@ -93,6 +95,8 @@ requires-dist = [
     { name = "playwright", specifier = ">=1.49.0" },
     { name = "polars", specifier = ">=1.15.0" },
     { name = "rich", specifier = ">=13.9.4" },
+    { name = "soundfile", specifier = ">=0.12.1" },
+    { name = "srt", specifier = ">=3.5.3" },
     { name = "tenacity", specifier = ">=9.0.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
@@ -1028,6 +1032,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e1/1a/569ea0420a0c4801c2c8dd40d8d544989522f6014d51def689125f3f2935/soxr-0.5.0.post1-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a3f16810dd649ab1f433991d2a9661e9e6a116c2b4101039b53b3c3e90a094fc", size = 248455 },
     { url = "https://files.pythonhosted.org/packages/bc/10/440f1ba3d4955e0dc740bbe4ce8968c254a3d644d013eb75eea729becdb8/soxr-0.5.0.post1-cp312-abi3-win_amd64.whl", hash = "sha256:b1be9fee90afb38546bdbd7bde714d1d9a8c5a45137f97478a83b65e7f3146f6", size = 164937 },
 ]
+
+[[package]]
+name = "srt"
+version = "3.5.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/b7/4a1bc231e0681ebf339337b0cd05b91dc6a0d701fa852bb812e244b7a030/srt-3.5.3.tar.gz", hash = "sha256:4884315043a4f0740fd1f878ed6caa376ac06d70e135f306a6dc44632eed0cc0", size = 28296 }
 
 [[package]]
 name = "stack-data"

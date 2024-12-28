@@ -28,7 +28,7 @@ def launch():
     for video_file in raw_list:
         # video = mp.VideoFileClip(str(video_file))
         # video_duration = video.duration  # 获取视频时长（秒）
-        video_duration = get_video_duration(video_file)
+        video_duration = fetch_video_duration(video_file)
         logger.debug(f"{video_file} - {video_duration}s - {current_duration}s")
         # 检查是否超出最大时长
         if current_duration > max_duration:
@@ -137,7 +137,12 @@ def launch():
     shutil.copy(source_path, dist_path)
 
 
-def get_video_duration(file_path):
+def fetch_video_duration(file_path):
+    # 确保 file_path 是 Path 对象
+    file_path = Path(file_path)
+    # 检查文件是否存在
+    if not file_path.is_file():
+        raise FileNotFoundError(f"文件 {file_path} 不存在")
     # 使用 ffprobe 获取视频信息，ffprobe 是 ffmpeg 的一个工具
     result = subprocess.run(
         [
@@ -155,11 +160,13 @@ def get_video_duration(file_path):
     )
 
     # 读取时长（单位为秒），并转换为浮点数
-    duration = float(result.stdout)
-    return duration
+    duration = float(result.stdout.strip())
+    if duration > 0:
+        return duration
+    else:
+        raise RuntimeError(f"ffprobe 调用失败: duration is zero")
 
 
 if __name__ == "__main__":
     clean_cache()
-
     launch()

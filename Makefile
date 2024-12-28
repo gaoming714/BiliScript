@@ -6,6 +6,8 @@ reset := $(shell tput sgr0)
 
 PREFIX := BiliScript
 
+default: check build package
+
 # Define check step
 check:
 	@if [ ! -f "tool/runtime/python.exe" ]; then \
@@ -28,7 +30,7 @@ requirement:
 	@echo -e "📄 ${green}Generated requirement.txt.${reset}"
 
 # Define build target
-build: check
+build:
 	@echo -e "👻 ${green}Copy tool/runtime...${reset}"
 	@mkdir -p runtime
 	@rsync -avq --delete tool/runtime/ ./runtime/

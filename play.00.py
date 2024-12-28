@@ -19,6 +19,7 @@ logConfig("logs/default.log", rotation="10 MB", level="DEBUG", mode=1)
 Pooh = {}
 
 cookie_path = Path() / "cookies" / "bilibili_slaver.json"
+cookie_path = Path() / "cookies" / "bilibili_fang.json"
 
 
 def launch():
@@ -26,10 +27,12 @@ def launch():
         cookie_create()
     bvid_list = fetch_homepage(mid=30978137)
 
+
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False)
         context = browser.new_context(storage_state=Path(cookie_path))
         page = context.new_page()
+        ipdb.set_trace()
         # pbar = tqdm(total=len(bvid_list))
         for index, item in enumerate(bvid_list):
             logger.info(f"{item}")
@@ -37,7 +40,7 @@ def launch():
                 f"https://www.bilibili.com/video/{item}/"
             )
             time.sleep(3)
-            page.locator("video").click()
+            page.locator("#bilibili-player video").click()
             time.sleep(1)
             if page.locator(".video-like.on").count():
                 logger.debug("已经点赞")
@@ -45,46 +48,53 @@ def launch():
             else:
                 page.locator(".video-like").click()
                 title = page.locator(".video-info-title").inner_text()
+                time.sleep(80)
+                continue
                 logger.debug(f"title: {title}")
                 res = kimiDB.fetch(f"这里是标题：{title}, 参考这个标题，提出一个简短的引战话题")
                 logger.debug(res)
+                page.get_by_placeholder("发个友善的弹幕见证当下").click()
+                time.sleep(2)
+                page.get_by_placeholder("发个友善的弹幕见证当下").fill(res)
+                time.sleep(2)
+                page.get_by_text("发送", exact=True).click()
                 # page.mouse.wheel(0, 1000)
                 time.sleep(0.5)
-                ipdb.set_trace()
                 page.locator("#commentbox  #input").first.click()
                 page.locator("#commentbox  #input").first.fill(f"{res} \n这里留言给你发脸换资源")
                 time.sleep(1)
                 page.get_by_role("button", name="发布").click()
+                time.sleep(10)
 
 
-        dist_folder = Path("dist")
-        mp4_list = list(dist_folder.glob("*.mp4"))
-        pbar = tqdm(total=len(mp4_list))
-        for index, item in enumerate(mp4_list):
-            logger.info(f"{item} - Waiting kimiDB")
-            title = kimiDB.fetch(
-                "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题"
-            )
-            key_list = kimiDB.fetch(
-                "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词"
-            )
-            page.goto(
-                "https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload"
-            )
-            time.sleep(2)
-            # upload file
-            upload_file(page, 0, item)
-            # magic_text
-            magic_text(page, title, "article", key_list)
-            # pub clock
-            tick = pendulum.parse("2024-11-21 15:00:00")
-            target_tick = tick.add(hours=1 * index)
-            pub_clock(page, str(target_tick))
-            # submit
-            page.locator(".submit-add").click()
-            logger.success(f"{item}")
-            pbar.update(1)
-        pbar.close()
+        # dist_folder = Path("dist")
+        # mp4_list = list(dist_folder.glob("*.mp4"))
+        # pbar = tqdm(total=len(mp4_list))
+        # for index, item in enumerate(mp4_list):
+        #     logger.info(f"{item} - Waiting kimiDB")
+        #     title = kimiDB.fetch(
+        #         "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 仿写这个标题"
+        #     )
+        #     key_list = kimiDB.fetch(
+        #         "这一只小小酥请收下 卡点美女 Powered by 野生的宝可梦 , 给我5个关键词"
+        #     )
+        #     page.goto(
+        #         "https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload"
+        #     )
+        #     time.sleep(2)
+        #     # upload file
+        #     upload_file(page, 0, item)
+        #     # magic_text
+        #     magic_text(page, title, "article", key_list)
+        #     # pub clock
+        #     tick = pendulum.parse("2024-11-21 15:00:00")
+        #     target_tick = tick.add(hours=1 * index)
+        #     pub_clock(page, str(target_tick))
+        #     # submit
+        #     page.locator(".submit-add").click()
+        #     logger.success(f"{item}")
+        #     pbar.update(1)
+        # pbar.close()
 
 
 def cookie_create():
@@ -243,4 +253,5 @@ if __name__ == "__main__":
     boot()
     # print(Pooh)
     # raise
-    launch()
+    while True:
+        launch()

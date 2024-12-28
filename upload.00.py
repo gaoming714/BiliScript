@@ -40,17 +40,18 @@ def launch():
                 "https://member.bilibili.com/platform/upload/video/frame?page_from=creative_home_top_upload"
             )
             title = kimiDB.fetch(
-                "这是在健身？好努力的表情 Powered by 野生的宝可梦 , 仿写这个标题，要风趣幽默"
+                "🔥小小酥 VS 程Yoooo ，喜欢左弹幕扣0 喜欢右弹幕扣1，要学习资料弹幕扣“666” Powered by 野生的宝可梦 。 仿写这个标题，要风趣幽默" # 
             )
             key_list = kimiDB.fetch(
-                "这是在健身？ Powered by 野生的宝可梦 , 给我5个关键词"
+                "学习资料 程女士 行不行啊 细狗 猛男 AI换脸 Powered by 野生的宝可梦 , 给我5个关键词"
             )
             # upload file
             upload_file(page, 0, item)
             # magic_text
             magic_text(page, title, "article", key_list)
             # pub clock
-            tick = pendulum.parse("2024-12-13 06:00:00")
+            tick = pendulum.parse("2024-12-26 18:30:00")
+            # tick = pendulum.now().add(hours=3).start_of('hour')
             target_tick = tick.add(hours=3 * index)
             pub_clock(page, target_tick)
             # submit
@@ -58,7 +59,6 @@ def launch():
             time.sleep(1)
             try:
                 page.get_by_role("button", name="再投一个")
-                print(f"Button 再投一个 appeared.")
             except:
                 # 如果超时未出现，抛出异常
                 raise RuntimeError(f"Button 再投一个 did not appear within 30s.")
@@ -73,7 +73,7 @@ def cookie_create():
         if Pooh.get("debug", False):
             browser = p.firefox.launch(headless=False)
         else:
-            browser = p.firefox.launch(headless=True)
+            browser = p.firefox.launch(headless=False)
         context = browser.new_context()
         page = context.new_page()
         page.goto("https://www.bilibili.com")
@@ -193,25 +193,19 @@ def pub_clock(page, pub_dt):
     time.sleep(0.5)
 
 
-def boot():
+@click.command()
+@click.option('--debug', is_flag=True, help="Enable debug mode")
+def UEFI(debug):
     global Pooh
     with open("config.toml", "rb") as f:
         config = tomllib.load(f)
     Pooh = config
     kimiDB.boot(Pooh.get("MOONSHOT_API_KEY", None))
 
-
-@click.command()
-@click.option('--debug', is_flag=True, help="Enable debug mode")
-def cli(debug):
-    global Pooh
-    boot()
     Pooh["debug"] = debug
     if debug:
         logger.info("debug mode")
     launch()
 
 if __name__ == "__main__":
-    cli()
-    # boot()
-    # launch()
+    UEFI()
